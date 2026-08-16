@@ -1,6 +1,6 @@
 import numpy as np
 
-from wasserlinie.config import INDEX_OFFSET, INDEX_SCALE
+from wasserlinie.config import STATE_OFFSET, STATE_SCALE
 from wasserlinie.field import build_field, encode, sample_river
 
 
@@ -11,20 +11,20 @@ def test_sample_river_interpolates_and_holds_ends():
     assert np.all(np.diff(values) >= 0)
 
 
-def test_encode_round_trips_the_index():
-    level = np.array([[INDEX_OFFSET, 0.0, 1.0, INDEX_OFFSET + INDEX_SCALE]], dtype=np.float32)
-    ones = np.ones_like(level)
-    packed = encode(level, ones, ones * 0.5)
-    decoded = packed[..., 0] / 255 * INDEX_SCALE + INDEX_OFFSET
-    assert np.allclose(decoded, level, atol=0.01)
+def test_encode_round_trips_the_state():
+    state = np.array([[STATE_OFFSET, -1.0, 0.0, 1.0, STATE_OFFSET + STATE_SCALE]], dtype=np.float32)
+    ones = np.ones_like(state)
+    packed = encode(state, ones, ones * 0.5)
+    decoded = packed[..., 0] / 255 * STATE_SCALE + STATE_OFFSET
+    assert np.allclose(decoded, state, atol=0.02)
     assert packed[0, 0, 1] == 255 and packed[0, 0, 2] == 127
 
 
 def test_build_field_prefers_measurements_and_marks_forecast():
     rivers = [{"id": 7, "gauges": [{"uuid": "a", "s": 0.2}, {"uuid": "b", "s": 0.8}]}]
     station_index = {"a": 0, "b": 1}
-    measured = np.array([[0.2, np.nan], [0.6, np.nan]], dtype=np.float32)
-    forecast = np.array([[np.nan, 0.3], [np.nan, 0.7]], dtype=np.float32)
+    measured = np.array([[-0.6, np.nan], [0.1, np.nan]], dtype=np.float32)
+    forecast = np.array([[np.nan, -0.5], [np.nan, 0.2]], dtype=np.float32)
     spread = np.array([[np.nan, 0.1], [np.nan, 0.5]], dtype=np.float32)
     ids, grid = build_field(rivers, station_index, measured, forecast, spread, np.array([0, 1]), 4)
     assert ids == [7]
@@ -32,3 +32,13 @@ def test_build_field_prefers_measurements_and_marks_forecast():
     assert grid[0, 0, :, 1].min() == 255  # step 0 fully measured
     assert grid[0, 1, :, 1].max() == 0  # step 1 is forecast only
     assert grid[0, 1, 0, 2] < grid[0, 1, -1, 2]  # spread grows towards the second gauge
+    # The dry end of the river must decode lower than the wetter end.
+    assert grid[0, 0, 0, 0] < grid[0, 0, -1, 0]
+
+
+def test_build_field_skips_rivers_whose_gauges_cannot_be_placed():
+    rivers = [{"id": 3, "gauges": [{"uuid": "a", "s": 0.5}]}]
+    nan = np.array([[np.nan, np.nan]], dtype=np.float32)
+    ids, grid = build_field(rivers, {"a": 0}, nan, nan, nan, np.array([0, 1]), 4)
+    assert ids == []
+    assert grid.shape[0] == 0
