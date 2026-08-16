@@ -1,12 +1,13 @@
 {
   "runs": [
     {
-      "id": "2026-08-16T16",
+      "id": "2026-08-16T16-gbq-1",
+      "model": "gbq-1",
       "issued": "2026-08-16T16:00:00+00:00",
-      "generated": "2026-08-16T16:22:42+00:00",
+      "generated": "2026-08-16T17:17:42+00:00",
       "horizonHours": 72,
       "stepHours": 3,
-      "file": "2026-08-16T16.parquet",
+      "file": "2026-08-16T16-gbq-1.parquet",
       "stations": 588,
       "trainingSamples": 392877,
       "trainedFrom": "2026-07-16T15:00:00+00:00"

@@ -47,6 +47,10 @@ class Paths:
         return self.out / "rivers.json"
 
     @property
+    def rivers_detail(self) -> Path:
+        return self.out / "rivers-detail.json"
+
+    @property
     def germany(self) -> Path:
         return self.out / "germany.json"
 

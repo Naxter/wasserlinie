@@ -14,6 +14,7 @@ async function fetchJson<T>(path: string, signal?: AbortSignal): Promise<T> {
 
 export const loadStations = (signal?: AbortSignal) => fetchJson<StationsFile>('stations.json', signal)
 export const loadRivers = (signal?: AbortSignal) => fetchJson<RiversFile>('rivers.json', signal)
+export const loadRiverDetail = (signal?: AbortSignal) => fetchJson<RiversFile>('rivers-detail.json', signal)
 export const loadManifest = (signal?: AbortSignal) => fetchJson<Manifest>('forecast/manifest.json', signal)
 export const loadOutline = (signal?: AbortSignal) => fetchJson<{ rings: [number, number][][] }>('germany.json', signal)
 

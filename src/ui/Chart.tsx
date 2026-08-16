@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { ForecastPoint, Reading } from '../data/db'
+import type { ForecastPoint, Reading } from '../data/store'
 import type { Station } from '../data/types'
 import { formatShortDate } from './format'
 

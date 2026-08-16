@@ -1,5 +1,5 @@
 import { loadManifest, loadOutline, loadStations } from './data/assets'
-import { LevelDb } from './data/db'
+import { LevelStore } from './data/store'
 import { Timeline } from './data/timeline'
 import { GaugeLayer } from './layers/gauges'
 import { LayerHost } from './layers/plugin'
@@ -19,6 +19,7 @@ export interface AppHandles {
 }
 
 export async function startApp(sceneEl: HTMLElement, creditsEl: HTMLElement): Promise<AppHandles> {
+  const state = store.getState()
   const outline = await loadOutline()
   const viewer = createViewer({ container: sceneEl, credits: creditsEl, outline: outline.rings })
   const director = new CameraDirector(viewer)
@@ -26,29 +27,24 @@ export async function startApp(sceneEl: HTMLElement, creditsEl: HTMLElement): Pr
   void director.flyTo(cameraTokens.germany, cameraTokens.introSeconds)
   const unbindClock = bindClock(viewer)
 
-  const state = store.getState()
   state.setStatus('Pegel werden geladen')
   const [stationsFile, manifest] = await Promise.all([
     loadStations(),
     loadManifest().catch(() => ({ runs: [] })),
   ])
   const run = manifest.runs[0] ?? null
-  const db = await LevelDb.open(run?.file ?? null)
-  const [levels, forecasts] = await Promise.all([db.allLevels(), db.allForecasts()])
-  if (levels.length === 0) throw new Error('levels.parquet is empty')
+  const levels = await LevelStore.open(run?.file ?? null)
+  if (levels.levels.station.length === 0) throw new Error('levels.parquet is empty')
 
-  let start = Infinity
-  let now = -Infinity
-  for (const row of levels) {
-    if (row.t < start) start = row.t
-    if (row.t > now) now = row.t
-  }
+  const now = levels.lastMeasurement
+  const start = levels.firstMeasurement
   const end = now + timeTokens.forecastHours * HOUR
-  const timeline = Timeline.build(stationsFile.stations, levels, forecasts, start, now, end)
+  const timeline = Timeline.build(stationsFile.stations, levels, start, now, end)
 
   state.setStations(stationsFile.stations)
   state.setRange({ start, now, end })
   state.setSimTime(now)
+  state.setRun(levels.forecast ? run : null)
   state.setStatus(null)
 
   const host = new LayerHost({ viewer, timeline })
@@ -62,14 +58,13 @@ export async function startApp(sceneEl: HTMLElement, creditsEl: HTMLElement): Pr
     }
   })
 
-  setServices({ db, timeline, director })
+  setServices({ levels, timeline, director })
 
   return {
     dispose() {
       unsubscribe()
       unbindClock()
       host.dispose()
-      void db.close()
       viewer.destroy()
     },
   }

@@ -1,6 +1,6 @@
 import { createStore } from 'zustand/vanilla'
 import { useStore } from 'zustand'
-import type { Station } from './data/types'
+import type { ForecastRun, Station } from './data/types'
 
 export interface TimeRange {
   start: number
@@ -16,6 +16,7 @@ export interface AppState {
   playing: boolean
   layers: Record<LayerId, boolean>
   stations: Station[]
+  run: ForecastRun | null
   selected: string | null
   hovered: string | null
   status: string | null
@@ -26,6 +27,7 @@ export interface AppState {
   togglePlay: () => void
   toggleLayer: (id: LayerId) => void
   setStations: (stations: Station[]) => void
+  setRun: (run: ForecastRun | null) => void
   select: (uuid: string | null) => void
   hover: (uuid: string | null) => void
   setStatus: (text: string | null) => void
@@ -40,6 +42,7 @@ export const store = createStore<AppState>((set, get) => ({
   playing: false,
   layers: { rivers: true, gauges: true },
   stations: [],
+  run: null,
   selected: null,
   hovered: null,
   status: null,
@@ -57,6 +60,7 @@ export const store = createStore<AppState>((set, get) => ({
   },
   toggleLayer: (id) => set((s) => ({ layers: { ...s.layers, [id]: !s.layers[id] } })),
   setStations: (stations) => set({ stations }),
+  setRun: (run) => set({ run }),
   select: (uuid) => set({ selected: uuid }),
   hover: (uuid) => set((s) => (s.hovered === uuid ? s : { hovered: uuid })),
   setStatus: (status) => set({ status }),

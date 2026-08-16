@@ -16,6 +16,9 @@ from .grid import hourly_index, level_matrix, load_stations
 # level curve plus the lead time, trained across all gauges at once. Levels are
 # standardised per station so a canal and the Rhine share one model. It has to
 # be honest, not good — the uncertainty band is the point.
+# Bump this whenever features, quantiles or hyper-parameters change; the app
+# shows it next to the run, so an old forecast can never be mistaken for a new one.
+MODEL_VERSION = "gbq-1"
 QUANTILES = (0.1, 0.5, 0.9)
 TRAIN_LEADS = (3, 6, 12, 24, 48, 72)
 LAGS = (3, 6, 12, 24, 72)
@@ -146,13 +149,14 @@ def run(paths: Paths) -> None:
 
     issued = index[-1]
     df = predict(models, z, mean, std, hours, stations, issued)
-    run_id = issued.strftime("%Y-%m-%dT%H")
+    run_id = f"{issued.strftime('%Y-%m-%dT%H')}-{MODEL_VERSION}"
     filename = f"{run_id}.parquet"
     df.to_parquet(paths.forecast_dir / filename, index=False, compression="zstd")
     write_manifest(
         paths,
         {
             "id": run_id,
+            "model": MODEL_VERSION,
             "issued": issued.isoformat(),
             "generated": datetime.now(UTC).isoformat(timespec="seconds"),
             "horizonHours": FORECAST_HOURS,

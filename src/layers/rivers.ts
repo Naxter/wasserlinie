@@ -7,9 +7,9 @@ import {
   PolylineMaterialAppearance,
   type Scene,
 } from 'cesium'
-import { loadField, loadRivers } from '../data/assets'
+import { loadField, loadRiverDetail, loadRivers } from '../data/assets'
 import type { Field, River } from '../data/types'
-import { createRiverMaterial, riverUniforms, stillField } from './riverMaterial'
+import { createRiverMaterial, riverUniforms, stillField, type FieldEncoding } from './riverMaterial'
 import type { FrameInfo, LayerContext, VisualLayer } from './plugin'
 
 // The signature layer. Rivers with gauges each get their own primitive and a
@@ -63,6 +63,8 @@ export class RiverLayer implements VisualLayer {
   private primitives: GroundPolylinePrimitive[] = []
   private live: Material[] = []
   private still: Material[] = []
+  private readonly background = new Map<number, GeometryInstance[]>()
+  private encoding: FieldEncoding | null = null
   private t0 = 0
   private stepMs = 1
   private steps = 1
@@ -75,31 +77,44 @@ export class RiverLayer implements VisualLayer {
     this.t0 = Date.parse(field.meta.t0)
     this.stepMs = field.meta.stepHours * HOUR
     this.steps = field.meta.steps
-    const encoding = field.meta
+    this.encoding = field.meta
 
-    const background = new Map<number, GeometryInstance[]>()
     for (const river of rivers.rivers) {
       const slot = field.slot.get(river.id)
       if (slot === undefined) {
-        const list = background.get(river.cls) ?? []
-        list.push(new GeometryInstance({ geometry: geometryFor(river), id: `river-${river.id}` }))
-        background.set(river.cls, list)
+        this.collectBackground(river)
         continue
       }
       const material = createRiverMaterial({
         field: fieldTexture(field, slot),
-        encoding,
+        encoding: field.meta,
         lengthKm: river.km,
         baseWidth: BASE_WIDTH,
       })
       this.live.push(material)
       this.addPrimitive([new GeometryInstance({ geometry: geometryFor(river), id: `river-${river.id}` })], material)
     }
+    this.flushBackground()
 
-    for (const [cls, instances] of background) {
+    // The fine network is three times the size of the gauged rivers and adds
+    // nothing to the first impression, so it arrives on its own.
+    const detail = await loadRiverDetail(signal)
+    signal.throwIfAborted()
+    for (const river of detail.rivers) this.collectBackground(river)
+    this.flushBackground()
+  }
+
+  private collectBackground(river: River): void {
+    const list = this.background.get(river.cls) ?? []
+    list.push(new GeometryInstance({ geometry: geometryFor(river), id: `river-${river.id}` }))
+    this.background.set(river.cls, list)
+  }
+
+  private flushBackground(): void {
+    for (const [cls, instances] of this.background) {
       const material = createRiverMaterial({
-        field: stillField(BACKGROUND_INDEX, encoding),
-        encoding,
+        field: stillField(BACKGROUND_INDEX, this.encoding!),
+        encoding: this.encoding!,
         lengthKm: 60,
         baseWidth: BASE_WIDTH * (cls >= 125 ? 0.9 : 0.75),
         intensity: BACKGROUND_INTENSITY,
@@ -107,6 +122,7 @@ export class RiverLayer implements VisualLayer {
       this.still.push(material)
       this.addPrimitive(instances, material)
     }
+    this.background.clear()
   }
 
   private addPrimitive(instances: GeometryInstance[], material: Material): void {
@@ -140,5 +156,6 @@ export class RiverLayer implements VisualLayer {
     this.primitives = []
     this.live = []
     this.still = []
+    this.background.clear()
   }
 }

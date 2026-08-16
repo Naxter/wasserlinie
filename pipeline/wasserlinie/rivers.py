@@ -22,6 +22,7 @@ from .names import normalize
 # waterway status (1310 federal waterway, 1320 first-order water).
 MIN_WIDTH_CLASS = 42
 WATERWAY_CODES = {"1310", "1320"}
+MAIN_WIDTH_CLASS = 125  # everything narrower is background, unless it has a gauge
 MIN_STEM_KM = 1.5
 MIN_ARM_KM = 4.0
 SIMPLIFY_M = 120.0
@@ -234,8 +235,19 @@ def run(paths: Paths) -> None:
         log.warning("no stations.json yet, rivers get no gauges")
 
     records = river_records(rivers)
-    write_json(paths.rivers, {"rivers": records})
-    log.info("rivers.json: %d parts, %d with gauges", len(records), sum(1 for r in records if r["gauges"]))
+    # Split so the browser can draw the rivers that carry data before the
+    # fine background network has even arrived.
+    main = [r for r in records if r["gauges"] or r["cls"] >= MAIN_WIDTH_CLASS]
+    main_ids = {r["id"] for r in main}
+    detail = [r for r in records if r["id"] not in main_ids]
+    write_json(paths.rivers, {"rivers": main})
+    write_json(paths.rivers_detail, {"rivers": detail})
+    log.info(
+        "rivers.json: %d parts, %d with gauges; rivers-detail.json: %d parts",
+        len(main),
+        sum(1 for r in main if r["gauges"]),
+        len(detail),
+    )
 
     vg = download(VG2500_URL, paths.cache / "vg2500.zip")
     outline = build_outline(extract_layer(vg, "vg2500/VG2500_STA", paths.cache / "vg2500"))

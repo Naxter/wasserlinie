@@ -1,4 +1,3 @@
-import type { ForecastRow, LevelRow } from './db'
 import type { Station } from './types'
 
 const HOUR = 3_600_000
@@ -10,6 +9,12 @@ export interface Sample {
   /** forecast band width (p90 - p10) in index units, 0 for measurements */
   spread: number
   forecast: boolean
+}
+
+/** What the timeline needs to read; rows must arrive grouped by station and in time order. */
+export interface LevelSource {
+  eachLevel(visit: (station: string, t: number, value: number) => void): void
+  eachForecast(visit: (station: string, t: number, p10: number, p50: number, p90: number) => void): void
 }
 
 // One hourly grid for every station, measurements first, forecast median
@@ -35,15 +40,15 @@ export class Timeline {
     stations.forEach((s, i) => this.slot.set(s.uuid, i))
   }
 
-  static build(stations: Station[], levels: LevelRow[], forecast: ForecastRow[], start: number, now: number, end: number): Timeline {
+  static build(stations: Station[], source: LevelSource, start: number, now: number, end: number): Timeline {
     const tl = new Timeline(stations, start, now, end)
-    for (const row of levels) {
-      const s = tl.slot.get(row.station)
-      const h = tl.hourOf(row.t)
-      if (s === undefined || h === null || row.t > now) continue
-      tl.cm[s * tl.hours + h] = row.value
-    }
-    tl.placeForecast(forecast)
+    source.eachLevel((station, t, value) => {
+      const s = tl.slot.get(station)
+      const h = tl.hourOf(t)
+      if (s === undefined || h === null || t > now) return
+      tl.cm[s * tl.hours + h] = value
+    })
+    tl.placeForecast(source)
     tl.deriveIndex()
     return tl
   }
@@ -53,35 +58,35 @@ export class Timeline {
     return h >= 0 && h < this.hours ? h : null
   }
 
-  private placeForecast(rows: ForecastRow[]): void {
+  private placeForecast(source: LevelSource): void {
     const nowHour = this.hourOf(this.now)
     if (nowHour === null) return
     let current: string | null = null
     let lastHour = nowHour
     let lastCm = NaN
     let lastSpread = 0
-    for (const row of rows) {
-      const s = this.slot.get(row.station)
-      const h = this.hourOf(row.t)
-      if (s === undefined || h === null || h <= nowHour) continue
-      if (row.station !== current) {
-        current = row.station
+    source.eachForecast((station, t, p10, p50, p90) => {
+      const s = this.slot.get(station)
+      const h = this.hourOf(t)
+      if (s === undefined || h === null || h <= nowHour) return
+      if (station !== current) {
+        current = station
         lastHour = nowHour
         lastCm = this.cm[s * this.hours + nowHour]!
         lastSpread = 0
       }
-      const spread = row.p90 - row.p10
+      const spread = p90 - p10
       // Forecast points come every few hours; fill the hours between them linearly.
       for (let k = lastHour + 1; k <= h; k++) {
         const f = (k - lastHour) / (h - lastHour)
-        const from = Number.isNaN(lastCm) ? row.p50 : lastCm
-        this.cm[s * this.hours + k] = from + (row.p50 - from) * f
+        const from = Number.isNaN(lastCm) ? p50 : lastCm
+        this.cm[s * this.hours + k] = from + (p50 - from) * f
         this.spread[s * this.hours + k] = lastSpread + (spread - lastSpread) * f
       }
       lastHour = h
-      lastCm = row.p50
+      lastCm = p50
       lastSpread = spread
-    }
+    })
   }
 
   private deriveIndex(): void {

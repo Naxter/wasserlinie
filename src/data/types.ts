@@ -55,6 +55,7 @@ export interface FieldMeta {
 
 export interface ForecastRun {
   id: string
+  model: string
   issued: string
   generated: string
   horizonHours: number

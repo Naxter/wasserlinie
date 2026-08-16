@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react'
-import type { ForecastPoint, Reading } from '../data/db'
+import { useMemo } from 'react'
 import { useServices } from '../services'
 import { useApp } from '../store'
 import { Chart } from './Chart'
-import { formatCm, formatLead } from './format'
+import { formatCm, formatDate, formatLead, formatTime } from './format'
 
 const REF_LABEL: Record<string, [string, string]> = {
   mean: ['MNW', 'MHW'],
@@ -17,26 +16,19 @@ export function StationPanel() {
   const simTime = useApp((s) => s.simTime)
   const range = useApp((s) => s.range)
   const select = useApp((s) => s.select)
+  const run = useApp((s) => s.run)
   const services = useServices()
-  const [series, setSeries] = useState<{ uuid: string; readings: Reading[]; forecast: ForecastPoint[] } | null>(null)
 
   const station = stations.find((s) => s.uuid === selected) ?? null
+  const series = useMemo(
+    () =>
+      station && services
+        ? { readings: services.levels.readings(station.uuid), forecast: services.levels.forecastFor(station.uuid) }
+        : null,
+    [station, services],
+  )
 
-  useEffect(() => {
-    if (!station || !services) return
-    let cancelled = false
-    const { db } = services
-    Promise.all([db.readings(station.uuid), db.forecast(station.uuid)])
-      .then(([readings, forecast]) => {
-        if (!cancelled) setSeries({ uuid: station.uuid, readings, forecast })
-      })
-      .catch((err: unknown) => console.error('station query failed', err))
-    return () => {
-      cancelled = true
-    }
-  }, [station, services])
-
-  if (!station || !range || !services) return null
+  if (!station || !range || !services || !series) return null
   const slot = services.timeline.slotOf(station.uuid)
   const sample = slot === undefined ? null : services.timeline.sample(slot, simTime)
   const refs = station.ref ? REF_LABEL[station.ref] : null
@@ -65,6 +57,12 @@ export function StationPanel() {
         )}
       </div>
 
+      {sample?.forecast && run && (
+        <p className="provenance">
+          Lauf {formatDate(Date.parse(run.issued))} {formatTime(Date.parse(run.issued))} · Modell {run.model}
+        </p>
+      )}
+
       {refs && station.low !== null && station.high !== null && (
         <div className="marks">
           <span>
@@ -82,19 +80,15 @@ export function StationPanel() {
       )}
       {!refs && <div className="marks">ohne Referenzwerte, daher nicht im Flussnetz</div>}
 
-      {series && series.uuid === station.uuid ? (
-        <Chart
-          station={station}
-          readings={series.readings}
-          forecast={series.forecast}
-          start={range.start}
-          now={range.now}
-          end={range.end}
-          simTime={simTime}
-        />
-      ) : (
-        <p className="empty">Zeitreihe wird geladen …</p>
-      )}
+      <Chart
+        station={station}
+        readings={series.readings}
+        forecast={series.forecast}
+        start={range.start}
+        now={range.now}
+        end={range.end}
+        simTime={simTime}
+      />
 
       <div className="legend">
         <span>

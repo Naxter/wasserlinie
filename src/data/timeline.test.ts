@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { Timeline } from './timeline'
+import { Timeline, type LevelSource } from './timeline'
 import type { Station } from './types'
 
 const HOUR = 3_600_000
@@ -23,25 +23,24 @@ const station = (uuid: string, low: number | null, high: number | null): Station
   hasData: true,
 })
 
-function build() {
-  const stations = [station('a', 100, 300), station('b', null, null)]
-  const levels = [
-    { station: 'a', t: start, value: 100 },
-    { station: 'a', t: start + HOUR, value: 200 },
-    { station: 'a', t: now, value: 300 },
-    { station: 'b', t: now, value: 42 },
-  ]
-  const forecast = [
-    { station: 'a', t: now + 3 * HOUR, p10: 250, p50: 300, p90: 350 },
-    { station: 'a', t: now + 6 * HOUR, p10: 200, p50: 300, p90: 400 },
-  ]
-  return Timeline.build(stations, levels, forecast, start, now, end)
+const source: LevelSource = {
+  eachLevel(visit) {
+    visit('a', start, 100)
+    visit('a', start + HOUR, 200)
+    visit('a', now, 300)
+    visit('b', now, 42)
+  },
+  eachForecast(visit) {
+    visit('a', now + 3 * HOUR, 250, 300, 350)
+    visit('a', now + 6 * HOUR, 200, 300, 400)
+  },
 }
+
+const build = () => Timeline.build([station('a', 100, 300), station('b', null, null)], source, start, now, end)
 
 describe('Timeline', () => {
   it('interpolates measurements between hours', () => {
-    const tl = build()
-    const s = tl.sample(0, start + 0.5 * HOUR)!
+    const s = build().sample(0, start + 0.5 * HOUR)!
     expect(s.cm).toBeCloseTo(150)
     expect(s.index).toBeCloseTo(0.25)
     expect(s.forecast).toBe(false)
@@ -54,13 +53,11 @@ describe('Timeline', () => {
     expect(mid.forecast).toBe(true)
     expect(mid.cm).toBeCloseTo(300)
     expect(mid.spread).toBeCloseTo((100 / 200) * 0.5)
-    const late = tl.sample(0, now + 6 * HOUR)!
-    expect(late.spread).toBeCloseTo(200 / 200)
+    expect(tl.sample(0, now + 6 * HOUR)!.spread).toBeCloseTo(200 / 200)
   })
 
   it('keeps the index NaN for stations without reference marks', () => {
-    const tl = build()
-    const s = tl.sample(1, now)!
+    const s = build().sample(1, now)!
     expect(s.cm).toBe(42)
     expect(Number.isNaN(s.index)).toBe(true)
   })
@@ -69,5 +66,13 @@ describe('Timeline', () => {
     const tl = build()
     expect(tl.sample(0, start - HOUR)).toBeNull()
     expect(tl.sample(1, start)).toBeNull()
+  })
+
+  it('is deterministic: seeking away and back gives the same sample', () => {
+    const tl = build()
+    const before = tl.sample(0, start + 1.25 * HOUR)!
+    tl.sample(0, end)
+    tl.sample(0, start)
+    expect(tl.sample(0, start + 1.25 * HOUR)).toEqual(before)
   })
 })
