@@ -90,8 +90,9 @@ python -m wasserlinie all
 | `field`    | Interpolates levels along every gauged river for each 6-hour step → `field.bin`, `field.json`.        |
 
 PEGELONLINE only serves about a month of history per request; the 90-day
-window fills up by running `fetch` daily (a cron job or a scheduled workflow
-is enough). Point the app at a different data location with
+window fills up by running `fetch` daily. The included
+[workflow](.github/workflows/data.yml) does that every morning and commits
+the snapshot. Point the app at a different data location with
 `VITE_DATA_URL` — see `.env.example`.
 
 Formats are documented in [docs/data.md](docs/data.md).
