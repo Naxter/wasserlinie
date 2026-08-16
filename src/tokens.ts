@@ -54,7 +54,7 @@ export const post = {
 
 export const camera = {
   // Where the app opens: over the Alps looking north across the country.
-  germany: { lon: 10.4, lat: 45.7, height: 760_000, heading: 0, pitch: -50 },
+  germany: { lon: 10.4, lat: 45.3, height: 820_000, heading: 0, pitch: -50 },
   // First frame before the intro flight.
   approach: { lon: 2.0, lat: 36.0, height: 6_500_000, heading: 15, pitch: -75 },
   introSeconds: 4.5,

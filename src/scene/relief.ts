@@ -15,7 +15,7 @@ const RGB = {
   paper: hexToRgb(color.paper),
 }
 const SEA = mixRgb(RGB.abyss, RGB.chart, 0.45)
-const OUTLINE = color.tide + 'B0'
+const OUTLINE = color.tide + '85'
 const DIM = `rgba(${RGB.abyss.join(',')},${terrain.outsideDim})`
 const EARTH_CIRCUMFERENCE = 2 * Math.PI * Ellipsoid.WGS84.maximumRadius
 

@@ -5,6 +5,7 @@ import {
   HeadingPitchRange,
   Math as CesiumMath,
   Matrix4,
+  Transforms,
   type Scene,
   type Viewer,
 } from 'cesium'
@@ -127,12 +128,16 @@ export class CameraDirector {
       const ray = camera.getPickRay(new Cartesian2(canvas.clientWidth / 2, canvas.clientHeight / 2))
       const focus = ray ? this.scene.globe.pick(ray, this.scene) : undefined
       if (!focus) return
+      // Read heading and pitch in the focus point's own frame, so the first
+      // orbit step reproduces the current pose exactly instead of jumping.
+      camera.lookAtTransform(Transforms.eastNorthUpToFixedFrame(focus))
       this.orbit = {
         focus,
         heading: camera.heading,
         pitch: camera.pitch,
-        range: Cartesian3.distance(camera.positionWC, focus),
+        range: Cartesian3.magnitude(camera.position),
       }
+      camera.lookAtTransform(Matrix4.IDENTITY)
     }
     this.orbit.heading += tokens.driftRadiansPerSecond * dt
     camera.lookAt(this.orbit.focus, new HeadingPitchRange(this.orbit.heading, this.orbit.pitch, this.orbit.range))

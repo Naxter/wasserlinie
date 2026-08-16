@@ -16,6 +16,5 @@ __pycache__/
 Thumbs.db
 .idea/
 .vscode/
-.claude/
 
 *.egg-info/
