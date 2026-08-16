@@ -1,6 +1,6 @@
 import { PostProcessStage, type Scene } from 'cesium'
 import vignetteSource from '../shaders/vignette.frag.glsl?raw'
-import { post } from '../tokens'
+import { post, render } from '../tokens'
 
 // Bloom only strong enough for rivers and gauges to glow, a vignette to pull
 // the eye inwards, FXAA on top. Nothing else.
@@ -25,5 +25,7 @@ export function setupPostProcessing(scene: Scene): void {
     }),
   )
 
-  stages.fxaa.enabled = true
+  // FXAA smears text-sharp detail and duplicates what MSAA already does; with
+  // multisampling on it costs sharpness for nothing.
+  stages.fxaa.enabled = render.msaaSamples <= 1
 }

@@ -23,8 +23,10 @@ push past "now" and it becomes a forecast, visibly softer the further it goes.
 - **A scale you can read.** Every reading is placed on the gauge's own named
   levels — record low, mean low water, mean water, mean high water, record
   high — so gauges are comparable without pretending a centimetre means the
-  same thing everywhere. The status line counts how many gauges sit outside
-  their normal band right now, and clicking a count filters the map to them.
+  same thing everywhere.
+- **A list of what is actually happening.** Every gauge outside its normal band,
+  worst first, each against the mark it is judged by. Click one to fly to it;
+  the counts in the header filter the map to the dry or the wet ones.
 - **Rivers that carry data.** ~2,500 river parts from the official German
   topographic model, drawn on real terrain. The parts that have gauges are
   driven by measurements: the level between neighbouring gauges is

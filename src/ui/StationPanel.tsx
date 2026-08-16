@@ -39,15 +39,15 @@ export function StationPanel() {
   const change = sample && !sample.forecast ? changeIn24h(series.readings, simTime) : null
 
   return (
-    <aside className="panel">
+    <article className="panel">
+      <button className="back" onClick={() => select(null)}>
+        ← Auffällige Pegel
+      </button>
       <header>
         <div>
           <h2>{titleCase(station.name)}</h2>
           <div className="water">{titleCase(station.water)}</div>
         </div>
-        <button className="close" onClick={() => select(null)} aria-label="Schließen">
-          ×
-        </button>
       </header>
 
       <div className="value">
@@ -130,7 +130,7 @@ export function StationPanel() {
         {station.refYears ? ` (${station.refYears} Referenzjahre)` : ''}, keine amtliche Aussage.
         Warnungen geben die Landesbehörden heraus. Daten: PEGELONLINE (WSV).
       </footer>
-    </aside>
+    </article>
   )
 }
 

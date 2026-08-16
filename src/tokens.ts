@@ -81,6 +81,12 @@ export const atmosphere = {
   groundSaturationShift: -0.5,
 } as const
 
+export const render = {
+  msaaSamples: 4,
+  // Past 2x the cost climbs faster than the visible gain.
+  maxPixelRatio: 2,
+} as const
+
 export const post = {
   bloomContrast: 110,
   bloomBrightness: -0.68,

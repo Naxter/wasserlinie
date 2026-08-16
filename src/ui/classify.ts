@@ -13,6 +13,24 @@ const BANDS: { below: number; text: string }[] = [
   { below: 1.0, text: 'außergewöhnlich hoch für diesen Pegel' },
 ]
 
+const SHORT: { below: number; text: string }[] = [
+  { below: -1.0, text: 'unter Rekord' },
+  { below: -0.7, text: 'extrem niedrig' },
+  { below: unusual.low, text: 'niedrig' },
+  { below: -0.2, text: 'unter MW' },
+  { below: 0.2, text: 'normal' },
+  { below: unusual.high, text: 'über MW' },
+  { below: 0.7, text: 'hoch' },
+  { below: 1.0, text: 'extrem hoch' },
+]
+
+/** Two or three words for a list row, where the full sentence will not fit. */
+export function classifyShort(state: number | null): string | null {
+  if (state === null || Number.isNaN(state)) return null
+  for (const band of SHORT) if (state < band.below) return band.text
+  return 'über Rekord'
+}
+
 export function classify(state: number | null): string | null {
   if (state === null || Number.isNaN(state)) return null
   for (const band of BANDS) if (state < band.below) return band.text

@@ -1,6 +1,6 @@
 import { Color, ImageryLayer, Viewer, type ImageryProvider } from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
-import { atmosphere, camera as cameraTokens, color } from '../tokens'
+import { atmosphere, camera as cameraTokens, color, render } from '../tokens'
 import { setupPostProcessing } from './postprocess'
 import { ReliefImageryProvider, type Ring } from './relief'
 import { TerrariumTerrainProvider } from './terrain'
@@ -29,11 +29,17 @@ export function createViewer({ container, credits, outline }: SceneOptions): Vie
     skyBox: false,
     creditContainer: credits,
     requestRenderMode: false,
-    msaaSamples: 1,
+    // Cesium defaults to the browser's "recommended" resolution, which on a
+    // HiDPI screen means rendering at 1x and letting the compositor upscale —
+    // the whole map comes out soft. Render at the real device resolution and
+    // let MSAA do the edge work instead of a post-process blur.
+    useBrowserRecommendedResolution: false,
+    msaaSamples: render.msaaSamples,
     contextOptions: {
       webgl: { alpha: false, antialias: false, powerPreference: 'high-performance' },
     },
   })
+  viewer.resolutionScale = Math.min(window.devicePixelRatio || 1, render.maxPixelRatio)
 
   const scene = viewer.scene
   const globe = scene.globe

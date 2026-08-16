@@ -5,10 +5,11 @@ import { useApp } from '../store'
 import { unusual } from '../tokens'
 import { rampCss } from '../layers/ramp'
 import { formatDate } from './format'
+import { useQuantizedTime } from './useQuantizedTime'
 
 /** Counts how many gauges sit outside their normal band at the chosen moment. */
 export function StatusLine() {
-  const simTime = useApp((s) => s.simTime)
+  const simTime = useQuantizedTime()
   const filter = useApp((s) => s.filter)
   const setFilter = useApp((s) => s.setFilter)
   const stations = useApp((s) => s.stations)
