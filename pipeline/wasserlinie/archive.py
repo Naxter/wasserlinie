@@ -121,8 +121,9 @@ def seasonal_reference(daily: pd.DataFrame, window_days: int = 15, min_years: in
     The window is ±`window_days` calendar days across every year on record, which
     is what makes "low for the time of year" a different statement from "low".
     """
+    columns = ["station", "doy", "lo", "p10", "p25", "p50", "p75", "p90", "hi", "years"]
     if daily.empty:
-        return pd.DataFrame(columns=["station", "doy", "p10", "p25", "p50", "p75", "p90", "years"])
+        return pd.DataFrame(columns=columns)
     frame = daily.copy()
     frame["doy"] = frame["day"].dt.dayofyear.clip(upper=365)
     frame["year"] = frame["day"].dt.year
@@ -142,9 +143,12 @@ def seasonal_reference(daily: pd.DataFrame, window_days: int = 15, min_years: in
             if n_years < min_years or sample.size < 30:
                 continue
             p10, p25, p50, p75, p90 = np.percentile(sample, [10, 25, 50, 75, 90])
-            rows.append((station, target, p10, p25, p50, p75, p90, n_years))
-    out = pd.DataFrame(rows, columns=["station", "doy", "p10", "p25", "p50", "p75", "p90", "years"])
-    for c in ("p10", "p25", "p50", "p75", "p90"):
+            # The extremes of the window anchor the ends of the scale, so "as low
+            # as it has ever been on this date" lands on -1 rather than on a
+            # slope guessed from the middle of the distribution.
+            rows.append((station, target, sample.min(), p10, p25, p50, p75, p90, sample.max(), n_years))
+    out = pd.DataFrame(rows, columns=columns)
+    for c in ("lo", "p10", "p25", "p50", "p75", "p90", "hi"):
         out[c] = out[c].astype("float32")
     out["doy"] = out["doy"].astype("int16")
     out["years"] = out["years"].astype("int16")

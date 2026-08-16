@@ -17,6 +17,11 @@ export interface Station {
   marks: Record<string, number>
   /** years those marks were computed over */
   refYears: number | null
+  /**
+   * What the state is judged against: 'seasonal' means this gauge's own record
+   * for this time of year, 'marks' means its year-round published levels.
+   */
+  basis: 'seasonal' | 'marks' | null
   hasData: boolean
 }
 

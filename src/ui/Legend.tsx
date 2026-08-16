@@ -14,7 +14,7 @@ export function Legend() {
   const pos = (state: number) => `${((state - RAMP_MIN) / (RAMP_MAX - RAMP_MIN)) * 100}%`
   return (
     <figure className="legend-scale">
-      <figcaption>Wasserstand gegenüber den eigenen Kennwerten</figcaption>
+      <figcaption>Wasserstand gegenüber dem Normalbereich des Pegels</figcaption>
       <div className="bar" style={{ background: rampGradientCss() }}>
         {MARKS.map((m) => (
           <span key={m.state} className="mark" style={{ left: pos(m.state) }} />

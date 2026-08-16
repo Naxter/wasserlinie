@@ -2,15 +2,30 @@ import { unusual } from '../tokens'
 
 // Plain language for a state value. Deliberately statistical wording: this is a
 // comparison with the gauge's own long-term levels, not an official warning.
-const BANDS: { below: number; text: string }[] = [
-  { below: -1.0, text: 'niedriger als je an diesem Pegel gemessen' },
-  { below: -0.7, text: 'außergewöhnlich niedrig für diesen Pegel' },
-  { below: unusual.low, text: 'niedrig für diesen Pegel' },
-  { below: -0.2, text: 'etwas unter dem Mittelwasser' },
-  { below: 0.2, text: 'im normalen Bereich' },
-  { below: unusual.high, text: 'etwas über dem Mittelwasser' },
-  { below: 0.7, text: 'hoch für diesen Pegel' },
-  { below: 1.0, text: 'außergewöhnlich hoch für diesen Pegel' },
+type Basis = 'seasonal' | 'marks' | null
+
+/**
+ * Two wordings for the same scale. With a seasonal reference the claim is
+ * sharper — "for this time of year" — and it would be dishonest to make it
+ * when all we have are year-round marks.
+ */
+const BANDS: { below: number; seasonal: string; marks: string }[] = [
+  {
+    below: -1.0,
+    seasonal: 'niedriger als je zu dieser Jahreszeit gemessen',
+    marks: 'niedriger als je an diesem Pegel gemessen',
+  },
+  { below: -0.7, seasonal: 'außergewöhnlich niedrig für die Jahreszeit', marks: 'außergewöhnlich niedrig für diesen Pegel' },
+  { below: unusual.low, seasonal: 'niedrig für die Jahreszeit', marks: 'niedrig für diesen Pegel' },
+  { below: -0.2, seasonal: 'etwas unter dem Üblichen', marks: 'etwas unter dem Mittelwasser' },
+  { below: 0.2, seasonal: 'normal für die Jahreszeit', marks: 'im normalen Bereich' },
+  { below: unusual.high, seasonal: 'etwas über dem Üblichen', marks: 'etwas über dem Mittelwasser' },
+  { below: 0.7, seasonal: 'hoch für die Jahreszeit', marks: 'hoch für diesen Pegel' },
+  {
+    below: 1.0,
+    seasonal: 'außergewöhnlich hoch für die Jahreszeit',
+    marks: 'außergewöhnlich hoch für diesen Pegel',
+  },
 ]
 
 const SHORT: { below: number; text: string }[] = [
@@ -31,10 +46,11 @@ export function classifyShort(state: number | null): string | null {
   return 'über Rekord'
 }
 
-export function classify(state: number | null): string | null {
+export function classify(state: number | null, basis: Basis = 'marks'): string | null {
   if (state === null || Number.isNaN(state)) return null
-  for (const band of BANDS) if (state < band.below) return band.text
-  return 'höher als je an diesem Pegel gemessen'
+  const key = basis === 'seasonal' ? 'seasonal' : 'marks'
+  for (const band of BANDS) if (state < band.below) return band[key]
+  return key === 'seasonal' ? 'höher als je zu dieser Jahreszeit gemessen' : 'höher als je an diesem Pegel gemessen'
 }
 
 /** Change over the last day, in cm, or null if the history does not reach back. */

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
+import pandas as pd
 
 # How low or high is this gauge right now, on a scale everyone can read?
 #
@@ -30,6 +31,21 @@ import numpy as np
 # This is long-term but NOT seasonal: low water in August counts the same as low
 # water in March.
 ANCHORS = (("NNW", -1.0), ("MNW", -0.5), ("MW", 0.0), ("MHW", 0.5), ("HHW", 1.0))
+
+# With `wasserlinie history` fetched, a gauge is judged against its own record
+# for this time of year instead of against year-round marks. The scale keeps
+# exactly the same meaning — 0 normal, ±0.5 worth pointing at — so nothing
+# downstream changes; only the sentence in the panel gets more specific,
+# from "low for this gauge" to "low for mid-August".
+SEASONAL_ANCHORS = (
+    ("lo", -1.0),
+    ("p10", -0.5),
+    ("p25", -0.25),
+    ("p50", 0.0),
+    ("p75", 0.25),
+    ("p90", 0.5),
+    ("hi", 1.0),
+)
 MIN_SPAN_CM = 20.0
 MIN_REFERENCE_YEARS = 5
 
@@ -79,6 +95,26 @@ def state_of(curve: tuple[np.ndarray, np.ndarray], cm: np.ndarray) -> np.ndarray
     return np.clip(out, -2.0, 2.0)
 
 
+def seasonal_curves(seasonal: pd.DataFrame) -> dict[tuple[str, int], tuple[np.ndarray, np.ndarray]]:
+    """One curve per gauge and sampled day of the year, keyed for lookup."""
+    states = np.array([s for _, s in SEASONAL_ANCHORS], dtype=np.float64)
+    columns = [c for c, _ in SEASONAL_ANCHORS]
+    out: dict[tuple[str, int], tuple[np.ndarray, np.ndarray]] = {}
+    for row in seasonal.itertuples(index=False):
+        levels = np.array([getattr(row, c) for c in columns], dtype=np.float64)
+        # A flat or contradictory reference cannot rank anything.
+        if not np.all(np.diff(levels) > 0):
+            continue
+        out[(row.station, int(row.doy))] = (levels, states)
+    return out
+
+
+def nearest_doy(available: np.ndarray, doy: np.ndarray) -> np.ndarray:
+    """Snap each day to the nearest sampled day of the year, wrapping at new year."""
+    delta = np.abs(available[None, :] - doy[:, None])
+    return available[np.argmin(np.minimum(delta, 365 - delta), axis=1)]
+
+
 def station_curves(stations: list[dict[str, Any]]) -> dict[str, tuple[np.ndarray, np.ndarray]]:
     curves = {}
     for st in stations:
@@ -91,17 +127,66 @@ def station_curves(stations: list[dict[str, Any]]) -> dict[str, tuple[np.ndarray
 
 
 def states_for(
-    curves: dict[str, tuple[np.ndarray, np.ndarray]], station: np.ndarray, cm: np.ndarray
+    curves: dict[str, tuple[np.ndarray, np.ndarray]],
+    station: np.ndarray,
+    cm: np.ndarray,
+    doy: np.ndarray | None = None,
+    seasonal: dict[tuple[str, int], tuple[np.ndarray, np.ndarray]] | None = None,
 ) -> np.ndarray:
-    """State per row; NaN where the gauge has no usable scale."""
+    """State per row; NaN where the gauge has no usable scale.
+
+    Where a seasonal reference exists for the gauge it wins, because "low for
+    October" is a sharper statement than "low". The year-round marks stay as the
+    fallback for gauges the archive could not place.
+    """
     out = np.full(len(cm), np.nan, dtype=np.float32)
     order = np.argsort(station, kind="stable")
     grouped = station[order]
     edges = np.flatnonzero(np.r_[True, grouped[1:] != grouped[:-1], True])
+    sampled_doy: dict[str, np.ndarray] = {}
+    if seasonal:
+        for uuid, day in seasonal:
+            sampled_doy.setdefault(uuid, []).append(day)  # type: ignore[arg-type]
+        sampled_doy = {k: np.array(sorted(v)) for k, v in sampled_doy.items()}
+
     for start, stop in zip(edges[:-1], edges[1:], strict=True):
-        curve = curves.get(grouped[start])
-        if curve is None:
-            continue
+        uuid = grouped[start]
         rows = order[start:stop]
-        out[rows] = state_of(curve, cm[rows]).astype(np.float32)
+        days = sampled_doy.get(uuid) if seasonal is not None and doy is not None else None
+        if days is not None and len(days):
+            snapped = nearest_doy(days, doy[rows])
+            for day in np.unique(snapped):
+                curve = seasonal.get((uuid, int(day)))  # type: ignore[union-attr]
+                if curve is None:
+                    continue
+                subset = rows[snapped == day]
+                out[subset] = state_of(curve, cm[subset]).astype(np.float32)
+            continue
+        curve = curves.get(uuid)
+        if curve is not None:
+            out[rows] = state_of(curve, cm[rows]).astype(np.float32)
     return out
+
+
+def load_seasonal(paths: Any) -> dict[tuple[str, int], tuple[np.ndarray, np.ndarray]] | None:
+    """The seasonal reference from `wasserlinie history`, if it has been run."""
+    if not paths.seasonal.exists():
+        return None
+    return seasonal_curves(pd.read_parquet(paths.seasonal))
+
+
+def tag_basis(
+    stations: list[dict[str, Any]],
+    curves: dict[str, tuple[np.ndarray, np.ndarray]],
+    seasonal: dict[tuple[str, int], tuple[np.ndarray, np.ndarray]] | None,
+) -> None:
+    """Record what each gauge is judged against, so the app can word it honestly."""
+    seasonal_stations = {uuid for uuid, _ in (seasonal or {})}
+    for st in stations:
+        uuid = st["uuid"]
+        if uuid in seasonal_stations:
+            st["basis"] = "seasonal"
+        elif uuid in curves:
+            st["basis"] = "marks"
+        else:
+            st["basis"] = None

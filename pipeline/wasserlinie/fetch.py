@@ -87,7 +87,12 @@ def run(paths: Paths, days: int = 31, workers: int = 6) -> None:
 
     records = station_records(stations, levels)
     curves = anomaly.station_curves(records)
-    levels["state"] = anomaly.states_for(curves, levels["station"].to_numpy(), levels["value"].to_numpy())
+    seasonal = anomaly.load_seasonal(paths)
+    doy = levels["ts"].dt.tz_convert("Europe/Berlin").dt.dayofyear.to_numpy()
+    levels["state"] = anomaly.states_for(
+        curves, levels["station"].to_numpy(), levels["value"].to_numpy(), doy, seasonal
+    )
+    anomaly.tag_basis(records, curves, seasonal)
     levels.to_parquet(paths.levels, index=False, compression="zstd", row_group_size=50_000)
     log.info("levels.parquet: %d rows, %s → %s", len(levels), levels["ts"].min(), levels["ts"].max())
 

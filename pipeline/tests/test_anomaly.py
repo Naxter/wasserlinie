@@ -59,3 +59,50 @@ def test_states_for_leaves_unplaceable_stations_as_nan():
     assert np.isnan(got[0]) and np.isnan(got[2])
     assert round(float(got[1]), 3) == 0.0
     assert round(float(got[3]), 3) == 0.5
+
+
+def test_seasonal_reference_beats_the_year_round_marks():
+    import pandas as pd
+
+    from wasserlinie.anomaly import seasonal_curves, states_for
+
+    seasonal = pd.DataFrame(
+        [
+            # A dry-season day: normal is 185, the record low for the date is 7.
+            dict(station="a", doy=226, lo=7, p10=82, p25=120, p50=185, p75=240, p90=295, hi=497),
+            # A wet-season day at the same gauge sits much higher.
+            dict(station="a", doy=26, lo=90, p10=200, p25=260, p50=340, p75=430, p90=520, hi=800),
+        ]
+    )
+    curves = seasonal_curves(seasonal)
+    assert set(curves) == {("a", 226), ("a", 26)}
+
+    station = np.array(["a", "a"])
+    cm = np.array([185.0, 185.0])
+    doy = np.array([226, 26])
+    got = states_for({}, station, cm, doy, curves)
+    # The identical reading is normal in August and a drought in January.
+    assert round(float(got[0]), 2) == 0.0
+    assert got[1] < -0.5
+
+
+def test_a_record_for_the_date_lands_on_minus_one():
+    import pandas as pd
+
+    from wasserlinie.anomaly import seasonal_curves, states_for
+
+    seasonal = pd.DataFrame(
+        [dict(station="a", doy=226, lo=7, p10=82, p25=120, p50=185, p75=240, p90=295, hi=497)]
+    )
+    curves = seasonal_curves(seasonal)
+    got = states_for({}, np.array(["a"]), np.array([7.0]), np.array([226]), curves)
+    assert round(float(got[0]), 2) == -1.0
+
+
+def test_nearest_doy_wraps_around_new_year():
+    from wasserlinie.anomaly import nearest_doy
+
+    sampled = np.array([1, 91, 181, 271, 361])
+    # Day 364 is three days before 361 but only two days before day 1 once the
+    # year wraps, so the wrap has to win.
+    assert list(nearest_doy(sampled, np.array([3, 364, 200, 350]))) == [1, 1, 181, 361]

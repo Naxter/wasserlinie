@@ -22,6 +22,7 @@ const station = (uuid: string, placed: boolean): Station => ({
   ref: placed ? 'mean' : null,
   marks: {},
   refYears: placed ? 20 : null,
+  basis: placed ? 'marks' : null,
   hasData: true,
 })
 

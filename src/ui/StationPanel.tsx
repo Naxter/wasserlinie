@@ -35,7 +35,7 @@ export function StationPanel() {
   const sample = slot === undefined ? null : services.timeline.sample(slot, simTime)
   const refs = station.ref ? REF_LABEL[station.ref] : null
   const lead = (simTime - range.now) / 3_600_000
-  const verdict = classify(sample ? sample.state : null)
+  const verdict = classify(sample ? sample.state : null, station.basis)
   const change = sample && !sample.forecast ? changeIn24h(series.readings, simTime) : null
 
   return (
@@ -126,9 +126,10 @@ export function StationPanel() {
       </div>
 
       <footer className="disclaimer">
-        Statistischer Vergleich mit den Kennwerten dieses Pegels
-        {station.refYears ? ` (${station.refYears} Referenzjahre)` : ''}, keine amtliche Aussage.
-        Warnungen geben die Landesbehörden heraus. Daten: PEGELONLINE (WSV).
+        {station.basis === 'seasonal'
+          ? 'Statistischer Vergleich mit den eigenen Messwerten dieses Pegels seit 2000, jeweils ±15 Tage um den Kalendertag.'
+          : `Statistischer Vergleich mit den Kennwerten dieses Pegels${station.refYears ? ` (${station.refYears} Referenzjahre)` : ''}.`}{' '}
+        Keine amtliche Aussage. Warnungen geben die Landesbehörden heraus. Daten: PEGELONLINE (WSV).
       </footer>
     </article>
   )
