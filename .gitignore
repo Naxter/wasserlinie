@@ -1,0 +1,19 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+.env
+.env.local
+
+# Pipeline
+pipeline/.venv/
+pipeline/cache/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.claude/

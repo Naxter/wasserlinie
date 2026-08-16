@@ -1,0 +1,416 @@
+@import '@fontsource-variable/bricolage-grotesque';
+@import '@fontsource-variable/inter-tight';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--abyss);
+  color: var(--paper);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  position: relative;
+}
+
+.scene {
+  position: absolute;
+  inset: 0;
+}
+
+.scene .cesium-widget,
+.scene .cesium-widget canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.scene .cesium-viewer,
+.scene .cesium-viewer-cesiumWidgetContainer {
+  height: 100%;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+
+/* Layout ------------------------------------------------------------- */
+
+.hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding: 22px 26px 18px;
+}
+
+.hud > * {
+  pointer-events: auto;
+}
+
+.title {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  justify-self: start;
+}
+
+.title h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 560;
+  font-size: 22px;
+  letter-spacing: 0.01em;
+  color: var(--paper);
+}
+
+.title span {
+  color: color-mix(in srgb, var(--paper) 55%, transparent);
+  font-size: 12.5px;
+}
+
+.status {
+  justify-self: end;
+  align-self: start;
+  grid-row: 1;
+  grid-column: 1;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--paper) 55%, transparent);
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.status button {
+  all: unset;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: color-mix(in srgb, var(--paper) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--paper) 18%, transparent);
+  font-size: 12px;
+}
+
+.status button[aria-pressed='true'] {
+  color: var(--tide);
+  border-color: color-mix(in srgb, var(--tide) 45%, transparent);
+}
+
+.status button:hover {
+  color: var(--paper);
+}
+
+/* Time bar ----------------------------------------------------------- */
+
+.timebar {
+  grid-row: 3;
+  align-self: end;
+  justify-self: stretch;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 14px 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--chart) 72%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid color-mix(in srgb, var(--paper) 8%, transparent);
+}
+
+.timebar .play {
+  all: unset;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--paper);
+}
+
+.timebar .play:hover {
+  background: color-mix(in srgb, var(--paper) 8%, transparent);
+}
+
+.timebar .readout {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 190px;
+  line-height: 1.2;
+}
+
+.timebar .readout .date {
+  font-size: 15px;
+  color: var(--paper);
+}
+
+.timebar .readout .kind {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--paper) 55%, transparent);
+}
+
+.timebar .readout .kind[data-kind='forecast'] {
+  color: var(--haze);
+}
+
+.track {
+  position: relative;
+  height: 30px;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.track .rail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 13px;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--paper) 14%, transparent);
+  overflow: hidden;
+}
+
+.track .rail .past {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: color-mix(in srgb, var(--tide) 65%, transparent);
+}
+
+.track .rail .future {
+  position: absolute;
+  inset: 0 0 0 auto;
+  background: repeating-linear-gradient(
+    -55deg,
+    color-mix(in srgb, var(--haze) 60%, transparent) 0 3px,
+    transparent 3px 7px
+  );
+}
+
+.track .now {
+  position: absolute;
+  top: 6px;
+  width: 1px;
+  height: 18px;
+  background: var(--paper);
+  opacity: 0.6;
+}
+
+.track .now::after {
+  content: 'jetzt';
+  position: absolute;
+  top: -12px;
+  left: 4px;
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--paper) 55%, transparent);
+}
+
+.track .handle {
+  position: absolute;
+  top: 8px;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--abyss) 60%, transparent);
+}
+
+.track .ticks {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 22px;
+  height: 8px;
+}
+
+.track .ticks span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 9.5px;
+  color: color-mix(in srgb, var(--paper) 40%, transparent);
+  white-space: nowrap;
+}
+
+/* Station panel ------------------------------------------------------ */
+
+.panel {
+  grid-row: 2;
+  justify-self: end;
+  align-self: start;
+  width: 340px;
+  margin-top: 6px;
+  padding: 16px 18px 14px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--chart) 78%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in srgb, var(--paper) 8%, transparent);
+}
+
+.panel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.panel h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 540;
+  font-size: 18px;
+  line-height: 1.15;
+}
+
+.panel .water {
+  margin-top: 2px;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--paper) 55%, transparent);
+}
+
+.panel .close {
+  all: unset;
+  cursor: pointer;
+  color: color-mix(in srgb, var(--paper) 55%, transparent);
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 4px;
+}
+
+.panel .close:hover {
+  color: var(--paper);
+}
+
+.panel .value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+
+.panel .value strong {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-weight: 500;
+  font-size: 30px;
+  color: var(--paper);
+}
+
+.panel .value strong[data-kind='forecast'] {
+  color: var(--haze);
+}
+
+.panel .value span {
+  font-size: 12px;
+  color: color-mix(in srgb, var(--paper) 55%, transparent);
+}
+
+.panel .marks {
+  display: flex;
+  gap: 14px;
+  font-size: 11px;
+  color: color-mix(in srgb, var(--paper) 50%, transparent);
+  margin-bottom: 8px;
+}
+
+.panel .marks b {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-weight: 400;
+  color: color-mix(in srgb, var(--paper) 80%, transparent);
+}
+
+.panel svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.panel .legend {
+  display: flex;
+  gap: 14px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: color-mix(in srgb, var(--paper) 55%, transparent);
+}
+
+.panel .legend i {
+  display: inline-block;
+  width: 14px;
+  height: 2px;
+  margin-right: 5px;
+  vertical-align: middle;
+  background: var(--gauge);
+}
+
+.panel .legend i.p50 {
+  background: var(--haze);
+}
+
+.panel .legend i.band {
+  height: 8px;
+  background: color-mix(in srgb, var(--haze) 30%, transparent);
+}
+
+.panel .empty {
+  font-size: 12px;
+  color: color-mix(in srgb, var(--paper) 55%, transparent);
+  padding: 8px 0;
+}
+
+/* Credits ------------------------------------------------------------ */
+
+.credits {
+  position: absolute;
+  left: 26px;
+  bottom: 4px;
+  font-size: 10px;
+  color: color-mix(in srgb, var(--paper) 35%, transparent);
+  pointer-events: auto;
+}
+
+.credits .cesium-credit-logoContainer,
+.credits .cesium-credit-expand-link {
+  display: none !important;
+}
+
+.credits .cesium-credit-textContainer,
+.credits .cesium-widget-credits {
+  font-size: 10px;
+  color: inherit;
+}
+
+.credits a {
+  color: inherit;
+}
+
+.loading {
+  position: absolute;
+  left: 26px;
+  bottom: 84px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--paper) 45%, transparent);
+  pointer-events: none;
+}
