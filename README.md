@@ -28,10 +28,11 @@ further you go.
 - **Time is physical.** One slider covers the stored history plus 72 hours
   ahead. The sun follows it, so scrubbing moves the terminator across the
   country.
-- **Forecast that looks like a forecast.** A small gradient-boosting model
-  produces p10/p50/p90 per station. On the map the future is haze-coloured
-  and soft; the wider the band, the softer the line. In the station panel the
-  median sits inside its 10–90 % band.
+- **Forecast that looks like a forecast, and admits what it knows.** A small
+  gradient-boosting model produces p10/p50/p90 per station, with the band
+  widened until it actually covers 80 % of observations in a hindcast. On the
+  map the future is haze-coloured and soft; the wider the band, the softer the
+  line. Measured skill and its limits: [docs/forecast-skill.md](docs/forecast-skill.md).
 - **No servers.** The pipeline writes Parquet and JSON files; the browser
   queries the Parquet directly with DuckDB-WASM. Static hosting is enough.
 - **No satellite imagery, no ion token.** Terrain and a hand-made hillshade
@@ -86,8 +87,9 @@ python -m wasserlinie all
 | ---------- | --------------------------------------------------------------------------------------------------- |
 | `fetch`    | Stations and 15-minute readings from PEGELONLINE → hourly `levels.parquet`, `stations.json`. Merges with earlier runs and keeps 90 days. |
 | `rivers`   | Downloads BKG DLM1000 (56 MB, cached), merges river axes, skeletonises wide rivers that only exist as polygons, snaps gauges onto them → `rivers.json`, `germany.json`. |
-| `forecast` | Trains three quantile GBMs on all stations at once and writes a run into `forecast/` plus `manifest.json`. |
+| `forecast` | Trains three quantile GBMs on all inland stations at once, calibrates the band against held-out hours and writes a run into `forecast/` plus `manifest.json`. |
 | `field`    | Interpolates levels along every gauged river for each 6-hour step → `field.bin`, `field.json`.        |
+| `backtest` | Not part of `all`: retrains on a held-out split and rewrites `docs/forecast-skill.md`. |
 
 PEGELONLINE only serves about a month of history per request; the 90-day
 window fills up by running `fetch` daily. The included
@@ -100,8 +102,14 @@ Formats are documented in [docs/data.md](docs/data.md).
 ## Honesty notes
 
 - The forecast knows only the recent shape of each level curve. No rainfall,
-  no upstream routing. It is there to show what uncertainty looks like, not to
-  be relied on.
+  no upstream routing. A hindcast on unseen data puts its median error at
+  6–17 cm and shows it beating "assume the level stays put" clearly only in
+  the first few hours; past that it roughly matches it. The p10–p90 band is
+  calibrated to cover 80 %, and does. Full numbers in
+  [docs/forecast-skill.md](docs/forecast-skill.md).
+- Tidal gauges get no forecast. The model has no tide features, so on the
+  coast it was wrong by about a metre; showing that would have been worse than
+  showing nothing.
 - Levels are compared between stations as a position between each gauge's
   own low- and high-water marks (MNW/MHW, MTnw/MThw for tidal gauges). ~230
   stations publish no such marks; they still appear as gauges but do not feed

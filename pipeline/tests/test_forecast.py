@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from wasserlinie.forecast import LOOKBACK, features_at, fit, predict, standardise, training_set
+from wasserlinie.forecast import LOOKBACK, calibrate, features_at, fit, predict, standardise, training_set
 
 
 def _synthetic(stations: int = 3, hours: int = 400) -> np.ndarray:
@@ -39,3 +39,16 @@ def test_fit_and_predict_orders_quantiles():
     assert set(df["station"]) == {"s0", "s1", "s2"}
     assert (df["p10"] <= df["p50"]).all() and (df["p50"] <= df["p90"]).all()
     assert df["ts"].min() > pd.Timestamp("2026-08-16T12:00Z")
+
+
+def test_calibrate_widens_the_band_towards_the_target():
+    cm = _synthetic(stations=6, hours=500)
+    z, _, _ = standardise(cm)
+    hours = np.arange(500) % 24
+    split = 380
+    models = fit(*training_set(z[:, :split], hours[:split]))
+    factors = calibrate(models, z, hours, split)
+    assert factors, "expected a widening factor per lead"
+    assert all(1.0 <= k <= 6.0 for k in factors.values())
+    # A band that already covers enough is left alone rather than shrunk.
+    assert min(factors.values()) >= 1.0

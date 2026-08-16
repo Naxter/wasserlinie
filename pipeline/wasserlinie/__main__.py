@@ -4,7 +4,7 @@ import argparse
 import logging
 import sys
 
-from . import fetch, field, forecast, rivers
+from . import backtest, fetch, field, forecast, rivers
 from .config import Paths
 
 STEPS = {
@@ -12,13 +12,16 @@ STEPS = {
     "rivers": rivers.run,
     "forecast": forecast.run,
     "field": field.run,
+    "backtest": backtest.run,
 }
+# `backtest` is deliberately not part of `all`: it retrains the model and is
+# something you run when you want to know whether the forecast is any good.
 ORDER = ["fetch", "rivers", "forecast", "field"]
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="wasserlinie", description="Build the data assets for the app.")
-    parser.add_argument("step", choices=[*ORDER, "all"], help="which step to run")
+    parser.add_argument("step", choices=[*STEPS, "all"], help="which step to run")
     parser.add_argument("--out", help="output directory (default: public/data in the repo)")
     parser.add_argument("--cache", help="download cache (default: pipeline/cache)")
     parser.add_argument("--days", type=int, default=31, help="days of readings to request (fetch)")
