@@ -19,7 +19,7 @@ further you go.
 ## What it does
 
 - **Rivers that carry data.** ~2,500 river parts from the official German
-  topographic model, drawn on real terrain. The 58 parts that have gauges are
+  topographic model, drawn on real terrain. The parts that have gauges (58 in the snapshot) are
   driven by measurements: the level between neighbouring gauges is
   interpolated along the river, and the shader turns it into width, glow and
   pulse speed.
