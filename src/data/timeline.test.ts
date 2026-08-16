@@ -1,0 +1,73 @@
+import { describe, expect, it } from 'vitest'
+import { Timeline } from './timeline'
+import type { Station } from './types'
+
+const HOUR = 3_600_000
+const start = Date.UTC(2026, 7, 1)
+const now = start + 3 * HOUR
+const end = now + 6 * HOUR
+
+const station = (uuid: string, low: number | null, high: number | null): Station => ({
+  uuid,
+  name: uuid.toUpperCase(),
+  water: 'TEST',
+  waterKey: 'test',
+  lon: 8,
+  lat: 50,
+  km: null,
+  zero: null,
+  mw: null,
+  low,
+  high,
+  ref: low === null ? null : 'mean',
+  hasData: true,
+})
+
+function build() {
+  const stations = [station('a', 100, 300), station('b', null, null)]
+  const levels = [
+    { station: 'a', t: start, value: 100 },
+    { station: 'a', t: start + HOUR, value: 200 },
+    { station: 'a', t: now, value: 300 },
+    { station: 'b', t: now, value: 42 },
+  ]
+  const forecast = [
+    { station: 'a', t: now + 3 * HOUR, p10: 250, p50: 300, p90: 350 },
+    { station: 'a', t: now + 6 * HOUR, p10: 200, p50: 300, p90: 400 },
+  ]
+  return Timeline.build(stations, levels, forecast, start, now, end)
+}
+
+describe('Timeline', () => {
+  it('interpolates measurements between hours', () => {
+    const tl = build()
+    const s = tl.sample(0, start + 0.5 * HOUR)!
+    expect(s.cm).toBeCloseTo(150)
+    expect(s.index).toBeCloseTo(0.25)
+    expect(s.forecast).toBe(false)
+    expect(s.spread).toBe(0)
+  })
+
+  it('fills the forecast hours between the model points', () => {
+    const tl = build()
+    const mid = tl.sample(0, now + 1.5 * HOUR)!
+    expect(mid.forecast).toBe(true)
+    expect(mid.cm).toBeCloseTo(300)
+    expect(mid.spread).toBeCloseTo((100 / 200) * 0.5)
+    const late = tl.sample(0, now + 6 * HOUR)!
+    expect(late.spread).toBeCloseTo(200 / 200)
+  })
+
+  it('keeps the index NaN for stations without reference marks', () => {
+    const tl = build()
+    const s = tl.sample(1, now)!
+    expect(s.cm).toBe(42)
+    expect(Number.isNaN(s.index)).toBe(true)
+  })
+
+  it('returns null outside the range and where nothing is known', () => {
+    const tl = build()
+    expect(tl.sample(0, start - HOUR)).toBeNull()
+    expect(tl.sample(1, start)).toBeNull()
+  })
+})

@@ -9,6 +9,7 @@ import {
   type Viewer,
 } from 'cesium'
 import { camera as tokens, terrain } from '../tokens'
+import { cinematicEase, exaggerationFor } from './curves'
 
 export interface View {
   lon: number
@@ -16,21 +17,6 @@ export interface View {
   height: number
   heading: number
   pitch: number
-}
-
-// Slow start, slow stop. Nothing about the camera should ever feel abrupt.
-export function cinematicEase(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
-}
-
-export function exaggerationFor(height: number): number {
-  const t = CesiumMath.clamp(
-    (height - terrain.exaggerationNearHeight) / (terrain.exaggerationFarHeight - terrain.exaggerationNearHeight),
-    0,
-    1,
-  )
-  const s = t * t * (3 - 2 * t)
-  return terrain.exaggerationNear + (terrain.exaggerationFar - terrain.exaggerationNear) * s
 }
 
 interface Orbit {

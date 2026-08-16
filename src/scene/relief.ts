@@ -137,13 +137,6 @@ function shade(h: Float32Array, out: Uint8ClampedArray, y: number, level: number
       const i = row * size + col
       const height = h[i]!
       const o = i * 4
-      if (height <= terrain.seaLevel) {
-        out[o] = SEA[0]
-        out[o + 1] = SEA[1]
-        out[o + 2] = SEA[2]
-        out[o + 3] = 255
-        continue
-      }
       const left = col > 0 ? col - 1 : col
       const right = col < last ? col + 1 : col
       const dzdx = ((h[row * size + right]! - h[row * size + left]!) / ((right - left) * res)) * gain
@@ -151,10 +144,17 @@ function shade(h: Float32Array, out: Uint8ClampedArray, y: number, level: number
       const inv = 1 / Math.sqrt(dzdx * dzdx + dzdy * dzdy + 1)
       const nl = (-dzdx * lx - dzdy * ly + lz) * inv
       const bright = 0.42 + 0.92 * Math.max(0, nl)
-      const r = rampIndex(height)
-      out[o] = ramp[r]! * bright
-      out[o + 1] = ramp[r + 1]! * bright
-      out[o + 2] = ramp[r + 2]! * bright
+      if (height <= terrain.seaLevel) {
+        // Sea, but also open-pit mines: keep the shading so a hole reads as a hole.
+        out[o] = SEA[0] * bright
+        out[o + 1] = SEA[1] * bright
+        out[o + 2] = SEA[2] * bright
+      } else {
+        const r = rampIndex(height)
+        out[o] = ramp[r]! * bright
+        out[o + 1] = ramp[r + 1]! * bright
+        out[o + 2] = ramp[r + 2]! * bright
+      }
       out[o + 3] = 255
     }
   }

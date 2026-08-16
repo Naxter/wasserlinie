@@ -9,12 +9,13 @@ export function setupPostProcessing(scene: Scene): void {
 
   const bloom = stages.bloom
   bloom.enabled = true
-  bloom.uniforms.glowOnly = false
-  bloom.uniforms.contrast = post.bloomContrast
-  bloom.uniforms.brightness = post.bloomBrightness
-  bloom.uniforms.delta = 1.0
-  bloom.uniforms.sigma = post.bloomSigma
-  bloom.uniforms.stepSize = post.bloomStepSize
+  const uniforms = bloom.uniforms as Record<string, number | boolean>
+  uniforms.glowOnly = false
+  uniforms.contrast = post.bloomContrast
+  uniforms.brightness = post.bloomBrightness
+  uniforms.delta = 1.0
+  uniforms.sigma = post.bloomSigma
+  uniforms.stepSize = post.bloomStepSize
 
   stages.add(
     new PostProcessStage({

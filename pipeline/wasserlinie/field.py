@@ -73,6 +73,7 @@ def build_field(
         level = np.full((steps, samples), 0.5, dtype=np.float32)
         measured = np.zeros((steps, samples), dtype=np.float32)
         spread = np.zeros((steps, samples), dtype=np.float32)
+        filled = 0
         for k, col in enumerate(step_columns):
             m = measured_level[rows, col]
             f = forecast_level[rows, col]
@@ -80,10 +81,13 @@ def build_field(
             ok = ~np.isnan(value)
             if not ok.any():
                 continue
+            filled += 1
             level[k] = sample_river(pos[ok], value[ok], samples)
             measured[k] = sample_river(pos[ok], (~np.isnan(m[ok])).astype(np.float32), samples)
             sp = np.where(np.isnan(m[ok]), forecast_spread[rows[ok], col], 0.0)
             spread[k] = sample_river(pos[ok], np.nan_to_num(sp), samples)
+        if filled == 0:
+            continue  # gauges without reference marks tell the river nothing
         ids.append(river["id"])
         grids.append(encode(level, measured, spread))
     return ids, np.stack(grids) if grids else np.zeros((0, steps, samples, 3), dtype=np.uint8)
@@ -100,7 +104,10 @@ def run(paths: Paths) -> None:
     forecast = pd.read_parquet(paths.forecast_dir / run_meta["file"]) if run_meta else None
 
     now = levels["ts"].max().floor("1h")
-    t0 = levels["ts"].min().floor(f"{FIELD_STEP_HOURS}h")
+    # Steps are anchored at `now` so the last measured hour lands exactly on a row
+    # and the slider blends into the forecast only after it.
+    span_hours = (now - levels["ts"].min()) / pd.Timedelta(hours=1)
+    t0 = now - pd.Timedelta(hours=FIELD_STEP_HOURS * int(np.ceil(span_hours / FIELD_STEP_HOURS)))
     end = now + pd.Timedelta(hours=FORECAST_HOURS)
     index = hourly_index(t0, end)
     measured = to_index(level_matrix(levels, stations, index), stations)

@@ -46,8 +46,8 @@ export const atmosphere = {
 
 export const post = {
   bloomContrast: 110,
-  bloomBrightness: -0.55,
-  bloomSigma: 3.0,
+  bloomBrightness: -0.68,
+  bloomSigma: 2.6,
   bloomStepSize: 1.5,
   vignette: 0.55,
 } as const

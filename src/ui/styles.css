@@ -3,6 +3,17 @@
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/500.css';
 
+/* The map is the dark stage; everything the user reads sits on chart-paper
+   labels: cream ground, ink type, hard edges, no blur, no glow. */
+
+:root {
+  --ink: var(--chart);
+  --ink-soft: color-mix(in srgb, var(--ink) 58%, var(--paper));
+  --ink-faint: color-mix(in srgb, var(--ink) 30%, var(--paper));
+  --rule: color-mix(in srgb, var(--ink) 38%, var(--paper));
+  --label-shadow: 2px 2px 0 color-mix(in srgb, var(--abyss) 55%, transparent);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -16,7 +27,7 @@ body,
   background: var(--abyss);
   color: var(--paper);
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 13.5px;
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
 }
@@ -46,88 +57,134 @@ body,
   font-variant-numeric: tabular-nums slashed-zero;
 }
 
-/* Layout ------------------------------------------------------------- */
+button {
+  font: inherit;
+}
+
+/* Paper labels ---------------------------------------------------- */
+
+.paper,
+.masthead .title,
+.masthead .layers,
+.panel,
+.timebar,
+.status,
+.hovername {
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  box-shadow: var(--label-shadow);
+}
+
+/* Layout ---------------------------------------------------------- */
+
+.ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ui > * {
+  pointer-events: auto;
+}
 
 .hud {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  padding: 22px 26px 18px;
 }
 
 .hud > * {
   pointer-events: auto;
 }
 
-.title {
+.masthead {
+  position: absolute;
+  top: 22px;
+  left: 26px;
+  right: 26px;
   display: flex;
-  align-items: baseline;
-  gap: 14px;
-  justify-self: start;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: none;
 }
 
-.title h1 {
+.masthead > * {
+  pointer-events: auto;
+}
+
+.masthead .title {
+  padding: 10px 14px 11px;
+  max-width: 340px;
+}
+
+.masthead h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 560;
+  font-weight: 600;
   font-size: 22px;
-  letter-spacing: 0.01em;
-  color: var(--paper);
+  line-height: 1;
+  letter-spacing: -0.005em;
 }
 
-.title span {
-  color: color-mix(in srgb, var(--paper) 55%, transparent);
-  font-size: 12.5px;
-}
-
-.status {
-  justify-self: end;
-  align-self: start;
-  grid-row: 1;
-  grid-column: 1;
+.masthead .title p {
+  margin: 6px 0 0;
   font-size: 12px;
-  color: color-mix(in srgb, var(--paper) 55%, transparent);
-  display: flex;
-  gap: 16px;
-  align-items: center;
+  color: var(--ink-soft);
 }
 
-.status button {
+.masthead .layers {
+  display: flex;
+  padding: 4px;
+  gap: 2px;
+}
+
+.masthead .layers button {
   all: unset;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  color: color-mix(in srgb, var(--paper) 70%, transparent);
-  border: 1px solid color-mix(in srgb, var(--paper) 18%, transparent);
+  padding: 5px 10px 5px 8px;
+  border-radius: 1px;
   font-size: 12px;
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  gap: 7px;
 }
 
-.status button[aria-pressed='true'] {
-  color: var(--tide);
-  border-color: color-mix(in srgb, var(--tide) 45%, transparent);
+.masthead .layers button::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border: 1px solid var(--ink);
+  background: transparent;
 }
 
-.status button:hover {
-  color: var(--paper);
+.masthead .layers button[aria-pressed='true'] {
+  color: var(--ink);
 }
 
-/* Time bar ----------------------------------------------------------- */
+.masthead .layers button[aria-pressed='true']::before {
+  background: var(--ink);
+}
+
+.masthead .layers button:hover {
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+/* Time bar -------------------------------------------------------- */
 
 .timebar {
-  grid-row: 3;
-  align-self: end;
-  justify-self: stretch;
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  width: min(920px, calc(100% - 52px));
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 18px;
-  padding: 10px 14px 10px 12px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--chart) 72%, transparent);
-  backdrop-filter: blur(10px);
-  border: 1px solid color-mix(in srgb, var(--paper) 8%, transparent);
+  gap: 16px;
+  padding: 8px 14px 8px 8px;
 }
 
 .timebar .play {
@@ -137,32 +194,32 @@ body,
   height: 30px;
   display: grid;
   place-items: center;
-  border-radius: 6px;
-  color: var(--paper);
+  border-radius: 1px;
+  color: var(--ink);
 }
 
 .timebar .play:hover {
-  background: color-mix(in srgb, var(--paper) 8%, transparent);
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
 }
 
 .timebar .readout {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  min-width: 190px;
+  min-width: 205px;
   line-height: 1.2;
 }
 
 .timebar .readout .date {
-  font-size: 15px;
-  color: var(--paper);
+  font-size: 14px;
+  color: var(--ink);
 }
 
 .timebar .readout .kind {
-  font-size: 11px;
+  font-size: 10.5px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--paper) 55%, transparent);
+  color: var(--ink-soft);
 }
 
 .timebar .readout .kind[data-kind='forecast'] {
@@ -171,99 +228,110 @@ body,
 
 .track {
   position: relative;
-  height: 30px;
+  height: 38px;
   cursor: pointer;
   touch-action: none;
+  outline: none;
+}
+
+.track:focus-visible .handle {
+  box-shadow: 0 0 0 2px var(--paper), 0 0 0 3px var(--ink);
 }
 
 .track .rail {
   position: absolute;
   left: 0;
   right: 0;
-  top: 13px;
-  height: 4px;
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--paper) 14%, transparent);
+  top: 11px;
+  height: 6px;
+  border: 1px solid var(--ink);
   overflow: hidden;
 }
 
 .track .rail .past {
   position: absolute;
   inset: 0 auto 0 0;
-  background: color-mix(in srgb, var(--tide) 65%, transparent);
+  background: var(--ink);
 }
 
 .track .rail .future {
   position: absolute;
   inset: 0 0 0 auto;
-  background: repeating-linear-gradient(
-    -55deg,
-    color-mix(in srgb, var(--haze) 60%, transparent) 0 3px,
-    transparent 3px 7px
-  );
-}
-
-.track .now {
-  position: absolute;
-  top: 6px;
-  width: 1px;
-  height: 18px;
-  background: var(--paper);
-  opacity: 0.6;
-}
-
-.track .now::after {
-  content: 'jetzt';
-  position: absolute;
-  top: -12px;
-  left: 4px;
-  font-size: 9.5px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--paper) 55%, transparent);
-}
-
-.track .handle {
-  position: absolute;
-  top: 8px;
-  width: 14px;
-  height: 14px;
-  margin-left: -7px;
-  border-radius: 50%;
-  background: var(--paper);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--abyss) 60%, transparent);
+  background: repeating-linear-gradient(-55deg, var(--ink) 0 1px, transparent 1px 5px);
+  opacity: 0.55;
 }
 
 .track .ticks {
   position: absolute;
   left: 0;
   right: 0;
-  top: 22px;
-  height: 8px;
+  top: 18px;
+  height: 18px;
 }
 
-.track .ticks span {
+.track .tick {
   position: absolute;
   top: 0;
+  width: 1px;
+  height: 4px;
+  background: var(--ink-faint);
+}
+
+.track .tick.labelled {
+  height: 6px;
+  background: var(--ink-soft);
+}
+
+.track .tick em {
+  position: absolute;
+  top: 7px;
+  left: 0;
   transform: translateX(-50%);
+  font-style: normal;
+  font-family: var(--font-mono);
   font-size: 9.5px;
-  color: color-mix(in srgb, var(--paper) 40%, transparent);
+  color: var(--ink-soft);
   white-space: nowrap;
 }
 
-/* Station panel ------------------------------------------------------ */
+.track .now {
+  position: absolute;
+  top: 6px;
+  width: 1px;
+  height: 16px;
+  background: var(--ink);
+}
+
+.track .now::after {
+  content: 'jetzt';
+  position: absolute;
+  top: -8px;
+  left: 4px;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.track .handle {
+  position: absolute;
+  top: 8px;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+}
+
+/* Station panel --------------------------------------------------- */
 
 .panel {
-  grid-row: 2;
-  justify-self: end;
-  align-self: start;
+  position: absolute;
+  top: 82px;
+  right: 26px;
   width: 340px;
-  margin-top: 6px;
-  padding: 16px 18px 14px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--chart) 78%, transparent);
-  backdrop-filter: blur(12px);
-  border: 1px solid color-mix(in srgb, var(--paper) 8%, transparent);
+  padding: 14px 16px 12px;
 }
 
 .panel header {
@@ -276,7 +344,7 @@ body,
 .panel h2 {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 540;
+  font-weight: 600;
   font-size: 18px;
   line-height: 1.15;
 }
@@ -284,27 +352,27 @@ body,
 .panel .water {
   margin-top: 2px;
   font-size: 12px;
-  color: color-mix(in srgb, var(--paper) 55%, transparent);
+  color: var(--ink-soft);
 }
 
 .panel .close {
   all: unset;
   cursor: pointer;
-  color: color-mix(in srgb, var(--paper) 55%, transparent);
-  font-size: 18px;
+  color: var(--ink-soft);
+  font-size: 20px;
   line-height: 1;
-  padding: 2px 4px;
+  padding: 0 2px;
 }
 
 .panel .close:hover {
-  color: var(--paper);
+  color: var(--ink);
 }
 
 .panel .value {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin: 12px 0 4px;
+  margin: 10px 0 2px;
 }
 
 .panel .value strong {
@@ -312,7 +380,8 @@ body,
   font-variant-numeric: tabular-nums slashed-zero;
   font-weight: 500;
   font-size: 30px;
-  color: var(--paper);
+  line-height: 1;
+  color: var(--ink);
 }
 
 .panel .value strong[data-kind='forecast'] {
@@ -321,29 +390,81 @@ body,
 
 .panel .value span {
   font-size: 12px;
-  color: color-mix(in srgb, var(--paper) 55%, transparent);
+  color: var(--ink-soft);
 }
 
 .panel .marks {
   display: flex;
   gap: 14px;
   font-size: 11px;
-  color: color-mix(in srgb, var(--paper) 50%, transparent);
-  margin-bottom: 8px;
+  color: var(--ink-soft);
+  margin: 6px 0 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule);
 }
 
 .panel .marks b {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums slashed-zero;
   font-weight: 400;
-  color: color-mix(in srgb, var(--paper) 80%, transparent);
+  color: var(--ink);
 }
 
-.panel svg {
+.panel .chart {
   display: block;
   width: 100%;
   height: auto;
   overflow: visible;
+}
+
+.chart .grid {
+  stroke: color-mix(in srgb, var(--ink) 12%, transparent);
+  stroke-width: 1;
+}
+
+.chart .axis {
+  font-size: 8.5px;
+  fill: var(--ink-soft);
+}
+
+.chart .mark {
+  stroke: var(--ink);
+  stroke-opacity: 0.45;
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.chart .future {
+  fill: color-mix(in srgb, var(--haze) 9%, transparent);
+}
+
+.chart .band {
+  fill: color-mix(in srgb, var(--haze) 30%, transparent);
+}
+
+.chart .median {
+  fill: none;
+  stroke: var(--haze);
+  stroke-width: 1.5;
+}
+
+.chart .measured {
+  fill: none;
+  stroke: var(--gauge);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+.chart .nowline {
+  stroke: var(--ink);
+  stroke-opacity: 0.55;
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+
+.chart .cursor {
+  stroke: var(--ink);
+  stroke-width: 1.5;
 }
 
 .panel .legend {
@@ -351,7 +472,7 @@ body,
   gap: 14px;
   margin-top: 8px;
   font-size: 11px;
-  color: color-mix(in srgb, var(--paper) 55%, transparent);
+  color: var(--ink-soft);
 }
 
 .panel .legend i {
@@ -373,19 +494,46 @@ body,
 }
 
 .panel .empty {
+  margin: 0;
   font-size: 12px;
-  color: color-mix(in srgb, var(--paper) 55%, transparent);
-  padding: 8px 0;
+  color: var(--ink-soft);
+  padding: 30px 0;
+  text-align: center;
 }
 
-/* Credits ------------------------------------------------------------ */
+/* Small things ---------------------------------------------------- */
+
+.status,
+.hovername {
+  position: absolute;
+  left: 26px;
+  bottom: 96px;
+  padding: 5px 9px;
+  font-size: 11.5px;
+}
+
+.status.error {
+  color: var(--gauge);
+}
+
+.hovername {
+  bottom: 96px;
+  font-family: var(--font-display);
+  font-weight: 560;
+  font-size: 12.5px;
+  text-transform: capitalize;
+}
+
+.status + .hovername {
+  bottom: 128px;
+}
 
 .credits {
   position: absolute;
   left: 26px;
-  bottom: 4px;
+  bottom: 6px;
   font-size: 10px;
-  color: color-mix(in srgb, var(--paper) 35%, transparent);
+  color: color-mix(in srgb, var(--paper) 40%, transparent);
   pointer-events: auto;
 }
 
@@ -402,15 +550,4 @@ body,
 
 .credits a {
   color: inherit;
-}
-
-.loading {
-  position: absolute;
-  left: 26px;
-  bottom: 84px;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--paper) 45%, transparent);
-  pointer-events: none;
 }
