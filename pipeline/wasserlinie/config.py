@@ -16,7 +16,8 @@ FIELD_SAMPLES = 48
 STATE_OFFSET = -1.5
 STATE_SCALE = 3.0
 
-PEGELONLINE_URL = "https://www.pegelonline.wsv.de/webservices/rest-api/v2"
+PEGELONLINE_HOST = "https://www.pegelonline.wsv.de"
+PEGELONLINE_URL = f"{PEGELONLINE_HOST}/webservices/rest-api/v2"
 DLM1000_URL = "https://daten.gdz.bkg.bund.de/produkte/dlm/dlm1000/aktuell/dlm1000.utm32s.shape.ebenen.zip"
 VG2500_URL = "https://daten.gdz.bkg.bund.de/produkte/vg/vg2500/aktuell/vg2500_12-31.utm32s.shape.zip"
 
@@ -42,6 +43,15 @@ class Paths:
     @property
     def levels(self) -> Path:
         return self.out / "levels.parquet"
+
+    @property
+    def history(self) -> Path:
+        """Daily means back to 2000; big, so it stays in the cache."""
+        return self.cache / "history.parquet"
+
+    @property
+    def seasonal(self) -> Path:
+        return self.out / "seasonal.parquet"
 
     @property
     def rivers(self) -> Path:

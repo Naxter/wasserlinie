@@ -4,7 +4,7 @@ import argparse
 import logging
 import sys
 
-from . import backtest, fetch, field, forecast, rivers
+from . import archive, backtest, fetch, field, forecast, rivers
 from .config import Paths
 
 STEPS = {
@@ -13,6 +13,7 @@ STEPS = {
     "forecast": forecast.run,
     "field": field.run,
     "backtest": backtest.run,
+    "history": archive.run,
 }
 # `backtest` is deliberately not part of `all`: it retrains the model and is
 # something you run when you want to know whether the forecast is any good.
@@ -26,6 +27,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--cache", help="download cache (default: pipeline/cache)")
     parser.add_argument("--days", type=int, default=31, help="days of readings to request (fetch)")
     parser.add_argument("--workers", type=int, default=6, help="parallel requests (fetch)")
+    parser.add_argument("--only", help="restrict to gauges whose name contains this (history)")
+    parser.add_argument("--limit", type=int, help="stop after this many gauges (history)")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args(argv)
 
@@ -49,6 +52,8 @@ def main(argv: list[str] | None = None) -> int:
         logging.getLogger("wasserlinie").info("== %s", name)
         if name == "fetch":
             fetch.run(paths, days=args.days, workers=args.workers)
+        elif name == "history":
+            archive.run(paths, limit=args.limit, only=args.only)
         else:
             STEPS[name](paths)
     return 0
