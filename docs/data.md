@@ -71,8 +71,8 @@ MNW and MHW are missing or less than 20 cm apart, when the marks contradict
 each other, or when the gauge is tidal — a level between MTnw and MThw encodes
 the phase of the tide, not whether anything unusual is happening.
 
-Sorted by station, then time. Row groups of 50k rows so DuckDB can range-read
-one station cheaply.
+Sorted by station, then time, so one station is a contiguous slice and the app
+can serve its chart from an offset without a query engine.
 
 ## rivers.json
 
@@ -130,8 +130,8 @@ The manifest lists the newest runs first; the app loads `runs[0]`.
 | `p10`     | float32, cm     |
 | `p50`     | float32, cm     |
 | `p90`     | float32, cm     |
-| `state`   | float32         | the p50 on the state scale |
-| `stateLow`, `stateHigh` | float32 | the band on the state scale |
+| `state`   | float32, the p50 on the state scale |
+| `stateLow`, `stateHigh` | float32, the band on the state scale |
 
 Every 3 hours out to 72 hours after the last measurement.
 
