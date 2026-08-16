@@ -41,11 +41,12 @@ export class LevelStore implements LevelSource {
   ) {}
 
   static async open(forecastFile: string | null, signal?: AbortSignal): Promise<LevelStore> {
-    const levels = await readSeries('levels.parquet', ['value'], signal)
+    const levels = await readSeries('levels.parquet', ['value', 'state'], signal)
     let forecast: Series | null = null
     if (forecastFile) {
       try {
-        forecast = await readSeries(`forecast/${forecastFile}`, ['p10', 'p50', 'p90'], signal)
+        const columns = ['p10', 'p50', 'p90', 'state', 'stateLow', 'stateHigh']
+        forecast = await readSeries(`forecast/${forecastFile}`, columns, signal)
       } catch (err) {
         if (signal?.aborted) throw err
         console.warn('forecast unavailable, showing measurements only', err)
@@ -71,17 +72,19 @@ export class LevelStore implements LevelSource {
     return min
   }
 
-  eachLevel(visit: (station: string, t: number, value: number) => void): void {
+  eachLevel(visit: (station: string, t: number, cm: number, state: number) => void): void {
     const { station, t, columns } = this.levels
     const value = columns.value!
-    for (let i = 0; i < station.length; i++) visit(station[i]!, t[i]!, value[i]!)
+    const state = columns.state!
+    for (let i = 0; i < station.length; i++) visit(station[i]!, t[i]!, value[i]!, state[i]!)
   }
 
-  eachForecast(visit: (station: string, t: number, p10: number, p50: number, p90: number) => void): void {
+  eachForecast(visit: (station: string, t: number, cm: number, state: number, spread: number) => void): void {
     if (!this.forecast) return
     const { station, t, columns } = this.forecast
     for (let i = 0; i < station.length; i++) {
-      visit(station[i]!, t[i]!, columns.p10![i]!, columns.p50![i]!, columns.p90![i]!)
+      const spread = columns.stateHigh![i]! - columns.stateLow![i]!
+      visit(station[i]!, t[i]!, columns.p50![i]!, columns.state![i]!, spread)
     }
   }
 

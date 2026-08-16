@@ -12,13 +12,15 @@ import {
 } from 'cesium'
 import type { Timeline } from '../data/timeline'
 import type { Station } from '../data/types'
-import { store } from '../store'
-import { color, gauge } from '../tokens'
+import { store, type Filter } from '../store'
+import { color, gauge, unknownColor, unusual } from '../tokens'
 import type { FrameInfo, LayerContext, VisualLayer } from './plugin'
+import { sampleRamp } from './ramp'
 
-// Gauges are the only red thing on the map: red means someone actually
-// measures here. When the slider crosses into the forecast the marks turn to
-// haze and lose their edge, and grow with the spread of the forecast band.
+// Gauges carry the same colour scale as the rivers, so a mark and the water it
+// sits in always agree. From the overview only the gauges worth pointing at are
+// drawn; the rest fade in on the way down. That keeps the country calm on an
+// ordinary day and makes a dry summer visible at a glance.
 
 const SPRITE = 40
 
@@ -44,12 +46,21 @@ function sprite(soft: boolean): HTMLCanvasElement {
   return canvas
 }
 
-const COLORS = {
-  measured: Color.fromCssColorString(color.gauge),
-  forecast: Color.fromCssColorString(color.haze),
-  plain: Color.fromCssColorString(color.paper).withAlpha(0.5),
-  silent: Color.fromCssColorString(color.paper).withAlpha(0.22),
-  hover: Color.fromCssColorString(color.paper),
+const UNKNOWN = Color.fromCssColorString(unknownColor)
+const HOVER = Color.fromCssColorString(color.paper)
+const scratch = new Color()
+
+/** Below this height every gauge is shown, not just the notable ones. */
+const ALL_VISIBLE_HEIGHT = 260_000
+
+export function isUnusual(state: number): boolean {
+  return state <= unusual.low || state >= unusual.high
+}
+
+function passesFilter(state: number, filter: Filter): boolean {
+  if (filter === 'all') return true
+  if (Number.isNaN(state)) return false
+  return filter === 'low' ? state <= unusual.low : state >= unusual.high
 }
 
 export class GaugeLayer implements VisualLayer {
@@ -70,9 +81,7 @@ export class GaugeLayer implements VisualLayer {
     this.timeline = ctx.timeline
     this.stations = ctx.timeline.stations
     const collection = new BillboardCollection({ scene: this.scene })
-    const far = new NearFarScalar(gauge.nearDistance, 1.0, gauge.farDistance, 0.34)
-    const fade = new NearFarScalar(gauge.nearDistance, 1.0, gauge.farDistance, 0.75)
-    const fadeOut = new NearFarScalar(gauge.nearDistance, 1.0, gauge.farDistance * 0.35, 0.0)
+    const scaleByDistance = new NearFarScalar(gauge.nearDistance, 1.0, gauge.farDistance, 0.34)
     this.billboards = this.stations.map((s) =>
       collection.add({
         id: s.uuid,
@@ -80,11 +89,10 @@ export class GaugeLayer implements VisualLayer {
         image: this.crisp,
         heightReference: HeightReference.CLAMP_TO_GROUND,
         disableDepthTestDistance: Number.POSITIVE_INFINITY,
-        scaleByDistance: far,
-        translucencyByDistance: s.low !== null ? fade : fadeOut,
+        scaleByDistance,
         width: gauge.pixelSize * 2,
         height: gauge.pixelSize * 2,
-        color: COLORS.silent,
+        color: UNKNOWN,
       }),
     )
     this.collection = this.scene.primitives.add(collection) as BillboardCollection
@@ -117,35 +125,42 @@ export class GaugeLayer implements VisualLayer {
   }
 
   frame({ simTime, clock }: FrameInfo): void {
-    if (!this.timeline || !this.collection?.show) return
-    const { hovered, selected } = store.getState()
+    if (!this.timeline || !this.collection?.show || !this.scene) return
+    const { hovered, selected, filter } = store.getState()
+    const onlyNotable = this.scene.camera.positionCartographic.height > ALL_VISIBLE_HEIGHT
     for (let i = 0; i < this.billboards.length; i++) {
       const b = this.billboards[i]!
       const st = this.stations[i]!
+      const picked = st.uuid === selected || st.uuid === hovered
       const sample = this.timeline.sample(i, simTime)
-      const emphasis = st.uuid === selected ? 1.45 : st.uuid === hovered ? 1.25 : 1
       if (!sample) {
-        b.setImage('crisp', this.crisp)
-        b.color = COLORS.silent
-        b.scale = 0.4 * emphasis
+        b.show = false
         continue
       }
-      if (Number.isNaN(sample.index)) {
+      const state = sample.state
+      const known = !Number.isNaN(state)
+      const notable = known && isUnusual(state)
+      b.show = passesFilter(state, filter) && (picked || notable || !onlyNotable)
+      if (!b.show) continue
+
+      const emphasis = st.uuid === selected ? 1.5 : st.uuid === hovered ? 1.3 : 1
+      if (!known) {
         b.setImage('crisp', this.crisp)
-        b.color = st.uuid === hovered ? COLORS.hover : COLORS.plain
-        b.scale = 0.5 * emphasis
+        b.color = st.uuid === hovered ? HOVER : UNKNOWN
+        b.scale = 0.45 * emphasis
         continue
       }
-      const level = Math.min(1.4, Math.max(0, sample.index + 0.2)) / 1.4
-      const pulse = 1 + 0.06 * Math.sin(clock * 6.283 * (0.18 + level * 0.5) + i)
+      const { rgb, glow, speed } = sampleRamp(state)
+      const pulse = 1 + 0.07 * Math.sin(clock * 6.283 * (0.15 + speed * 0.25) + i)
+      Color.fromBytes(rgb[0], rgb[1], rgb[2], 255, scratch)
+      b.color = st.uuid === hovered ? HOVER : scratch
       if (sample.forecast) {
         b.setImage('soft', this.soft)
-        b.color = st.uuid === hovered ? COLORS.hover : COLORS.forecast
-        b.scale = (0.6 + 0.8 * level) * (1 + Math.min(1, sample.spread) * 0.9) * emphasis
+        b.scale = (0.6 + 0.7 * glow) * (1 + Math.min(1, sample.spread) * 0.8) * emphasis
       } else {
         b.setImage('crisp', this.crisp)
-        b.color = st.uuid === hovered ? COLORS.hover : COLORS.measured
-        b.scale = (0.5 + 0.75 * level) * pulse * emphasis
+        // Notable gauges sit larger so they read before the quiet ones.
+        b.scale = (0.5 + 0.6 * glow) * (notable ? 1.4 : 1) * pulse * emphasis
       }
     }
   }

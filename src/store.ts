@@ -8,6 +8,8 @@ export interface TimeRange {
   end: number
 }
 
+export type Filter = 'all' | 'low' | 'high'
+
 export type LayerId = 'rivers' | 'gauges'
 
 export interface AppState {
@@ -17,6 +19,7 @@ export interface AppState {
   layers: Record<LayerId, boolean>
   stations: Station[]
   run: ForecastRun | null
+  filter: Filter
   selected: string | null
   hovered: string | null
   status: string | null
@@ -28,6 +31,7 @@ export interface AppState {
   toggleLayer: (id: LayerId) => void
   setStations: (stations: Station[]) => void
   setRun: (run: ForecastRun | null) => void
+  setFilter: (filter: Filter) => void
   select: (uuid: string | null) => void
   hover: (uuid: string | null) => void
   setStatus: (text: string | null) => void
@@ -43,6 +47,7 @@ export const store = createStore<AppState>((set, get) => ({
   layers: { rivers: true, gauges: true },
   stations: [],
   run: null,
+  filter: 'all',
   selected: null,
   hovered: null,
   status: null,
@@ -61,6 +66,7 @@ export const store = createStore<AppState>((set, get) => ({
   toggleLayer: (id) => set((s) => ({ layers: { ...s.layers, [id]: !s.layers[id] } })),
   setStations: (stations) => set({ stations }),
   setRun: (run) => set({ run }),
+  setFilter: (filter) => set((s) => ({ filter: s.filter === filter ? 'all' : filter })),
   select: (uuid) => set({ selected: uuid }),
   hover: (uuid) => set((s) => (s.hovered === uuid ? s : { hovered: uuid })),
   setStatus: (status) => set({ status }),

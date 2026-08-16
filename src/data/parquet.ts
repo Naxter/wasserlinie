@@ -35,9 +35,12 @@ function toMillis(values: unknown[]): Float64Array {
   return out
 }
 
-function toFloats(values: unknown[]): Float32Array {
+export function toFloats(values: unknown[]): Float32Array {
   const out = new Float32Array(values.length)
-  for (let i = 0; i < values.length; i++) out[i] = Number(values[i])
+  for (let i = 0; i < values.length; i++) {
+    const v = values[i]
+    out[i] = v === null || v === undefined ? NaN : Number(v)
+  }
   return out
 }
 

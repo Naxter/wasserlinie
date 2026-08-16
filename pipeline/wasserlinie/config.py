@@ -11,9 +11,10 @@ FORECAST_HOURS = 72
 FORECAST_STEP_HOURS = 3
 FIELD_STEP_HOURS = 6
 FIELD_SAMPLES = 48
-# The level index (0 = low-water mark, 1 = high-water mark) is packed into a byte over this range.
-INDEX_OFFSET = -0.5
-INDEX_SCALE = 2.5
+# The state (-1 = record low, 0 = normal, +1 = record high) is packed into a
+# byte over this range, leaving room either side for record-breaking levels.
+STATE_OFFSET = -1.5
+STATE_SCALE = 3.0
 
 PEGELONLINE_URL = "https://www.pegelonline.wsv.de/webservices/rest-api/v2"
 DLM1000_URL = "https://daten.gdz.bkg.bund.de/produkte/dlm/dlm1000/aktuell/dlm1000.utm32s.shape.ebenen.zip"

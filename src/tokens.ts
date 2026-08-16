@@ -13,6 +13,29 @@ export const color = {
 
 export type ColorName = keyof typeof color
 
+// How a gauge's state is coloured. State is a position on the gauge's own
+// named levels: -1 its record low, -0.5 mean low water, 0 mean water,
+// +0.5 mean high water, +1 its record high.
+//
+// The normal band is wide and quiet on purpose, so an ordinary day is a calm
+// turquoise country and anything else stands out. Both ends are warm, but the
+// dry end is desaturated and dim while the wet end is saturated and bright —
+// brightness, not hue alone, separates them.
+export const anomalyRamp = [
+  { state: -1.0, color: '#C88A2E', glow: 0.55, speed: 0.3 },
+  { state: -0.5, color: '#A8B072', glow: 0.62, speed: 0.55 },
+  { state: -0.2, color: '#4FD1D9', glow: 0.72, speed: 1.0 },
+  { state: 0.2, color: '#4FD1D9', glow: 0.72, speed: 1.0 },
+  { state: 0.5, color: '#E0632B', glow: 0.88, speed: 1.6 },
+  { state: 1.0, color: '#E8324A', glow: 1.0, speed: 2.2 },
+] as const
+
+/** Gauges with no reference levels get this: a statement that we cannot say. */
+export const unknownColor = '#6E7A85'
+
+/** Beyond these the level counts as worth pointing at. */
+export const unusual = { low: -0.5, high: 0.5 } as const
+
 export const font = {
   display: "'Bricolage Grotesque Variable', 'Inter Tight Variable', sans-serif",
   body: "'Inter Tight Variable', system-ui, sans-serif",

@@ -2,12 +2,13 @@
 
 ![Germany's river network as glowing veins on dark terrain](docs/hero.png)
 
-Germany's river network as a living map. Every river that has a gauge on it
-draws its width, brightness and flow speed from real water levels — high
-water swells and pulses faster, low water runs thin and matte. Drag the time
-slider through the last weeks and the whole network breathes with it; push
-past "now" and it turns into a forecast, visibly softer and less certain the
-further you go.
+Germany's river network as a living map, coloured by how unusual the water is
+**for each gauge**. A raw "312 cm" tells you nothing; the same reading placed
+against that gauge's own mean low water, mean water and record levels tells
+you at a glance whether a river is running dry. Rivers below their mean low
+water turn ochre and slow down, normal water stays turquoise, high water goes
+red and quickens. Drag the time slider and the whole network moves with it;
+push past "now" and it becomes a forecast, visibly softer the further it goes.
 
 [![CI](https://github.com/Naxter/wasserlinie/actions/workflows/ci.yml/badge.svg)](https://github.com/Naxter/wasserlinie/actions/workflows/ci.yml)
 ![MIT license](https://img.shields.io/badge/license-MIT-green)
@@ -18,13 +19,21 @@ further you go.
 
 ## What it does
 
+- **A scale you can read.** Every reading is placed on the gauge's own named
+  levels — record low, mean low water, mean water, mean high water, record
+  high — so gauges are comparable without pretending a centimetre means the
+  same thing everywhere. The status line counts how many gauges sit outside
+  their normal band right now, and clicking a count filters the map to them.
 - **Rivers that carry data.** ~2,500 river parts from the official German
-  topographic model, drawn on real terrain. The parts that have gauges (58 in the snapshot) are
+  topographic model, drawn on real terrain. The parts that have gauges are
   driven by measurements: the level between neighbouring gauges is
-  interpolated along the river, and the shader turns it into width, glow and
-  pulse speed.
-- **Gauges are the only red thing.** ~700 PEGELONLINE stations. Red means
-  someone actually measures here; everything computed is never red.
+  interpolated along the river, and the shader turns it into colour, glow and
+  pulse speed. Line width stays absolute, so the Rhine still looks like the
+  Rhine at low water.
+- **Grey means we do not know.** Of ~700 PEGELONLINE stations, only those that
+  publish enough long-term statistics get a colour. Tidal gauges are left out
+  on purpose: a level between two tides says where the tide is, not whether
+  anything is wrong.
 - **Time is physical.** One slider covers the stored history plus 72 hours
   ahead. The sun follows it, so scrubbing moves the terminator across the
   country.
@@ -112,10 +121,15 @@ Formats are documented in [docs/data.md](docs/data.md).
 - Tidal gauges get no forecast. The model has no tide features, so on the
   coast it was wrong by about a metre; showing that would have been worse than
   showing nothing.
-- Levels are compared between stations as a position between each gauge's
-  own low- and high-water marks (MNW/MHW, MTnw/MThw for tidal gauges). ~230
-  stations publish no such marks; they still appear as gauges but do not feed
-  the network and their forecast is not drawn on the map.
+- The colour scale is long-term but **not seasonal**: low water in August
+  counts the same as low water in March. A seasonal comparison would need each
+  gauge's own history across many years, and that does not exist openly for
+  this network — PEGELONLINE serves about a month, and CAMELS-DE, the one open
+  multi-year German archive, covers state catchment gauges and matches only 15
+  of these 691 stations. See [docs/data.md](docs/data.md).
+- Roughly half the stations stay grey: 219 publish no long-term marks at all
+  and 98 are tidal. They are still clickable and still show their measured
+  curve, they just get no verdict.
 - River geometry is 1:1,000,000. Close up, lines can drift a few hundred
   metres from the actual water.
 

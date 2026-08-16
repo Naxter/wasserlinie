@@ -14,7 +14,7 @@ from .config import HISTORY_DAYS, Paths, log
 from .names import water_key
 from .pegelonline import Station
 
-LEVEL_COLUMNS = ["station", "ts", "value", "rank"]
+LEVEL_COLUMNS = ["station", "ts", "value", "state"]
 
 
 def write_json(path: Path, payload: Any) -> None:
@@ -35,7 +35,7 @@ def hourly_frame(uuid: str, rows: list[dict[str, Any]]) -> pd.DataFrame:
 def merge_levels(existing: pd.DataFrame | None, fresh: pd.DataFrame, now: datetime) -> pd.DataFrame:
     """Append new readings to what earlier runs collected and keep the last HISTORY_DAYS."""
     kept = [f for f in (existing, fresh) if f is not None and len(f)]
-    frames = [f.drop(columns=["rank"], errors="ignore") for f in kept]
+    frames = [f.drop(columns=["state"], errors="ignore") for f in kept]
     if not frames:
         return pd.DataFrame(columns=["station", "ts", "value"])
     df = pd.concat(frames, ignore_index=True)
@@ -87,15 +87,15 @@ def run(paths: Paths, days: int = 31, workers: int = 6) -> None:
 
     records = station_records(stations, levels)
     curves = anomaly.station_curves(records)
-    levels["rank"] = anomaly.ranks_for(curves, levels["station"].to_numpy(), levels["value"].to_numpy())
+    levels["state"] = anomaly.states_for(curves, levels["station"].to_numpy(), levels["value"].to_numpy())
     levels.to_parquet(paths.levels, index=False, compression="zstd", row_group_size=50_000)
     log.info("levels.parquet: %d rows, %s → %s", len(levels), levels["ts"].min(), levels["ts"].max())
 
     payload = {"generated": now.isoformat(timespec="seconds"), "stations": records}
     write_json(paths.stations, payload)
-    ranked = int(np.isfinite(levels["rank"]).sum())
+    ranked = int(np.isfinite(levels["state"]).sum())
     log.info(
-        "stations.json: %d stations, %d with a reference curve; %d/%d readings ranked",
+        "stations.json: %d stations, %d with a scale; %d/%d readings placed",
         len(stations),
         len(curves),
         ranked,

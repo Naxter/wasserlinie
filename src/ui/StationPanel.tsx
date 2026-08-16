@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import { useServices } from '../services'
 import { useApp } from '../store'
 import { Chart } from './Chart'
+import { rampCss } from '../layers/ramp'
+import { classify, changeIn24h } from './classify'
 import { formatCm, formatDate, formatLead, formatTime } from './format'
 
 const REF_LABEL: Record<string, [string, string]> = {
@@ -33,6 +35,8 @@ export function StationPanel() {
   const sample = slot === undefined ? null : services.timeline.sample(slot, simTime)
   const refs = station.ref ? REF_LABEL[station.ref] : null
   const lead = (simTime - range.now) / 3_600_000
+  const verdict = classify(sample ? sample.state : null)
+  const change = sample && !sample.forecast ? changeIn24h(series.readings, simTime) : null
 
   return (
     <aside className="panel">
@@ -51,11 +55,30 @@ export function StationPanel() {
           <>
             <strong data-kind={sample.forecast ? 'forecast' : 'measured'}>{formatCm(sample.cm)}</strong>
             <span>cm {sample.forecast ? `· Prognose ${formatLead(lead)}` : '· gemessen'}</span>
+            {change !== null && (
+              <span className="trend mono">
+                {change > 0 ? '↑' : change < 0 ? '↓' : '→'} {change > 0 ? '+' : ''}
+                {formatCm(change)} cm / 24 h
+              </span>
+            )}
           </>
         ) : (
           <span>kein Wert zu diesem Zeitpunkt</span>
         )}
       </div>
+
+      {sample && (
+        <p className="verdict">
+          {verdict ? (
+            <>
+              <i style={{ background: rampCss(sample.state) }} />
+              {verdict}
+            </>
+          ) : (
+            <span className="muted">Zu wenig Kennwerte für eine Einordnung</span>
+          )}
+        </p>
+      )}
 
       {sample?.forecast && run && (
         <p className="provenance">
@@ -101,6 +124,12 @@ export function StationPanel() {
           <i className="band" /> 10–90 %
         </span>
       </div>
+
+      <footer className="disclaimer">
+        Statistischer Vergleich mit den Kennwerten dieses Pegels
+        {station.refYears ? ` (${station.refYears} Referenzjahre)` : ''}, keine amtliche Aussage.
+        Warnungen geben die Landesbehörden heraus. Daten: PEGELONLINE (WSV).
+      </footer>
     </aside>
   )
 }

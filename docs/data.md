@@ -39,6 +39,37 @@ them in Berlin time.
 | `station` | string          | station uuid                  |
 | `ts`      | timestamp (UTC) | hourly                        |
 | `value`   | float32         | water level in cm, hourly mean |
+| `state`   | float32         | position on the gauge's scale, null where it cannot be placed |
+
+### The state scale
+
+`state` is what every colour in the app is driven by. It places a reading on
+the gauge's own published levels:
+
+| state | level | meaning |
+| ---: | --- | --- |
+| −1.0 | NNW | the lowest ever recorded here |
+| −0.5 | MNW | mean low water, the usual bottom of the year |
+| 0.0 | MW | mean water, normal |
+| +0.5 | MHW | mean high water, the usual top of the year |
+| +1.0 | HHW | the highest ever recorded here |
+
+Linear in between, and the slope of the outer segment continues past the ends
+so a record-breaking level keeps moving instead of piling up on the end stop.
+
+It is deliberately **not** a percentile, and deliberately **not** seasonal.
+A percentile would spend 95% of its range on levels above mean low water and
+squash every degree of drought into the bottom few percent — which is exactly
+where the interesting variation sits. A seasonal comparison would need years of
+history per gauge; PEGELONLINE serves roughly a month and does not answer for
+dates in the past, and CAMELS-DE (the one open multi-year German level archive,
+1582 catchments, 1951–2020) matches only 15 of these 691 stations because it
+covers state catchment gauges rather than federal waterways.
+
+`state` is null when the gauge publishes fewer than three of those marks, when
+MNW and MHW are missing or less than 20 cm apart, when the marks contradict
+each other, or when the gauge is tidal — a level between MTnw and MThw encodes
+the phase of the tide, not whether anything unusual is happening.
 
 Sorted by station, then time. Row groups of 50k rows so DuckDB can range-read
 one station cheaply.
@@ -75,7 +106,7 @@ The texture behind the river shader.
   "t0": "2026-07-16T10:00:00+00:00",
   "now": "2026-08-16T16:00:00+00:00",
   "stepHours": 6, "steps": 138, "samples": 48, "channels": 3,
-  "indexOffset": -0.5, "indexScale": 2.5,
+  "stateOffset": -1.5, "stateScale": 3.0,
   "horizonHours": 72,
   "forecastRun": "2026-08-16T16",
   "rivers": [1, 0, 2, …]
@@ -84,9 +115,9 @@ The texture behind the river shader.
 
 `field.bin` is a plain `uint8` array shaped
 `[rivers][steps][samples][channels]`, in the order of the `rivers` list.
-Per cell: R = level index packed as `(index - indexOffset) / indexScale`,
-G = 255 measured … 0 forecast, B = forecast spread (p90 − p10) in index
-units. Steps are anchored so `now` falls exactly on a row.
+Per cell: R = state packed as `(state - stateOffset) / stateScale`,
+G = 255 measured … 0 forecast, B = forecast band width on the state scale.
+Steps are anchored so `now` falls exactly on a row.
 
 ## forecast/manifest.json and forecast/&lt;run&gt;.parquet
 
@@ -99,6 +130,8 @@ The manifest lists the newest runs first; the app loads `runs[0]`.
 | `p10`     | float32, cm     |
 | `p50`     | float32, cm     |
 | `p90`     | float32, cm     |
+| `state`   | float32         | the p50 on the state scale |
+| `stateLow`, `stateHigh` | float32 | the band on the state scale |
 
 Every 3 hours out to 72 hours after the last measurement.
 

@@ -50,8 +50,8 @@ export interface FieldMeta {
   steps: number
   samples: number
   channels: number
-  indexOffset: number
-  indexScale: number
+  stateOffset: number
+  stateScale: number
   horizonHours: number
   forecastRun: string | null
   rivers: number[]

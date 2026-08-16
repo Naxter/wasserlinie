@@ -626,3 +626,204 @@ button {
     bottom: 150px;
   }
 }
+
+/* Status line ----------------------------------------------------- */
+
+.masthead .title {
+  min-width: 340px;
+}
+
+.statusline {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 7px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.statusline .date {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  color: var(--ink);
+}
+
+.statusline .of {
+  font-size: 11px;
+  color: var(--ink-faint);
+  flex-basis: 100%;
+}
+
+.statusline .calm {
+  color: var(--ink);
+}
+
+.statusline button {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 1px 5px;
+  border-radius: 1px;
+  border: 1px solid transparent;
+  color: var(--ink-soft);
+}
+
+.statusline button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+.statusline button[aria-pressed='true'] {
+  border-color: var(--rule);
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  color: var(--ink);
+}
+
+.statusline button:disabled {
+  cursor: default;
+  color: var(--ink-faint);
+}
+
+.statusline button b {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.statusline button i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  align-self: center;
+}
+
+/* Legend ---------------------------------------------------------- */
+
+.legend-scale {
+  position: absolute;
+  left: 26px;
+  bottom: 96px;
+  width: 268px;
+  margin: 0;
+  padding: 10px 12px 9px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  box-shadow: var(--label-shadow);
+}
+
+.legend-scale figcaption {
+  font-size: 11px;
+  color: var(--ink-soft);
+  margin-bottom: 7px;
+}
+
+.legend-scale .bar {
+  position: relative;
+  height: 10px;
+  margin: 0 22px;
+  border: 1px solid var(--ink);
+}
+
+.legend-scale .bar .mark {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--ink);
+  opacity: 0.55;
+}
+
+.legend-scale .ticks {
+  position: relative;
+  height: 13px;
+  margin: 2px 22px 0;
+}
+
+.legend-scale .ticks span {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 9px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.legend-scale .ends {
+  display: flex;
+  margin: 0 4px;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--ink-faint);
+}
+
+.legend-scale .note {
+  margin: 7px 0 0;
+  padding-top: 7px;
+  border-top: 1px solid var(--rule);
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.legend-scale .note i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+/* Panel verdict --------------------------------------------------- */
+
+.panel .verdict {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.panel .verdict i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.panel .verdict .muted {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.panel .value .trend {
+  font-size: 11px;
+  color: var(--ink-soft);
+  margin-left: auto;
+}
+
+.panel .disclaimer {
+  margin: 9px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule);
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+}
+
+@media (max-width: 640px) {
+  .masthead .title {
+    min-width: 0;
+  }
+
+  .legend-scale {
+    display: none;
+  }
+
+  .statusline .of {
+    display: none;
+  }
+}

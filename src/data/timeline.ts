@@ -4,17 +4,21 @@ const HOUR = 3_600_000
 
 export interface Sample {
   cm: number
-  /** 0 at the station's low-water mark, 1 at its high-water mark; NaN without reference */
-  index: number
-  /** forecast band width (p90 - p10) in index units, 0 for measurements */
+  /**
+   * Where the level sits on the gauge's own scale: -1 its record low, 0 mean
+   * water, +1 its record high. NaN when the gauge publishes no reference
+   * levels. Computed by the pipeline, never derived here.
+   */
+  state: number
+  /** forecast band width on the same state scale, 0 for measurements */
   spread: number
   forecast: boolean
 }
 
 /** What the timeline needs to read; rows must arrive grouped by station and in time order. */
 export interface LevelSource {
-  eachLevel(visit: (station: string, t: number, value: number) => void): void
-  eachForecast(visit: (station: string, t: number, p10: number, p50: number, p90: number) => void): void
+  eachLevel(visit: (station: string, t: number, cm: number, state: number) => void): void
+  eachForecast(visit: (station: string, t: number, cm: number, state: number, spread: number) => void): void
 }
 
 // One hourly grid for every station, measurements first, forecast median
@@ -22,7 +26,7 @@ export interface LevelSource {
 export class Timeline {
   readonly hours: number
   readonly cm: Float32Array
-  readonly index: Float32Array
+  readonly state: Float32Array
   readonly spread: Float32Array
   private readonly slot = new Map<string, number>()
 
@@ -35,21 +39,21 @@ export class Timeline {
     this.hours = Math.round((end - start) / HOUR) + 1
     const n = stations.length * this.hours
     this.cm = new Float32Array(n).fill(NaN)
-    this.index = new Float32Array(n).fill(NaN)
+    this.state = new Float32Array(n).fill(NaN)
     this.spread = new Float32Array(n)
     stations.forEach((s, i) => this.slot.set(s.uuid, i))
   }
 
   static build(stations: Station[], source: LevelSource, start: number, now: number, end: number): Timeline {
     const tl = new Timeline(stations, start, now, end)
-    source.eachLevel((station, t, value) => {
+    source.eachLevel((station, t, cm, state) => {
       const s = tl.slot.get(station)
       const h = tl.hourOf(t)
       if (s === undefined || h === null || t > now) return
-      tl.cm[s * tl.hours + h] = value
+      tl.cm[s * tl.hours + h] = cm
+      tl.state[s * tl.hours + h] = state
     })
     tl.placeForecast(source)
-    tl.deriveIndex()
     return tl
   }
 
@@ -64,8 +68,9 @@ export class Timeline {
     let current: string | null = null
     let lastHour = nowHour
     let lastCm = NaN
+    let lastState = NaN
     let lastSpread = 0
-    source.eachForecast((station, t, p10, p50, p90) => {
+    source.eachForecast((station, t, cm, state, spread) => {
       const s = this.slot.get(station)
       const h = this.hourOf(t)
       if (s === undefined || h === null || h <= nowHour) return
@@ -73,31 +78,22 @@ export class Timeline {
         current = station
         lastHour = nowHour
         lastCm = this.cm[s * this.hours + nowHour]!
+        lastState = this.state[s * this.hours + nowHour]!
         lastSpread = 0
       }
-      const spread = p90 - p10
       // Forecast points come every few hours; fill the hours between them linearly.
       for (let k = lastHour + 1; k <= h; k++) {
         const f = (k - lastHour) / (h - lastHour)
-        const from = Number.isNaN(lastCm) ? p50 : lastCm
-        this.cm[s * this.hours + k] = from + (p50 - from) * f
+        const fromCm = Number.isNaN(lastCm) ? cm : lastCm
+        const fromState = Number.isNaN(lastState) ? state : lastState
+        this.cm[s * this.hours + k] = fromCm + (cm - fromCm) * f
+        this.state[s * this.hours + k] = fromState + (state - fromState) * f
         this.spread[s * this.hours + k] = lastSpread + (spread - lastSpread) * f
       }
       lastHour = h
-      lastCm = p50
+      lastCm = cm
+      lastState = state
       lastSpread = spread
-    })
-  }
-
-  private deriveIndex(): void {
-    this.stations.forEach((st, s) => {
-      if (st.low === null || st.high === null) return
-      const span = st.high - st.low
-      const base = s * this.hours
-      for (let h = 0; h < this.hours; h++) {
-        this.index[base + h] = (this.cm[base + h]! - st.low) / span
-        this.spread[base + h] = this.spread[base + h]! / span
-      }
     })
   }
 
@@ -115,23 +111,23 @@ export class Timeline {
     const a = this.cm[base + h0]!
     const b = this.cm[base + h1]!
     let cm: number
-    let idx: number
+    let state: number
     let spread: number
     if (!Number.isNaN(a) && !Number.isNaN(b)) {
       cm = a + (b - a) * f
-      idx = this.index[base + h0]! + (this.index[base + h1]! - this.index[base + h0]!) * f
+      state = this.state[base + h0]! + (this.state[base + h1]! - this.state[base + h0]!) * f
       spread = this.spread[base + h0]! + (this.spread[base + h1]! - this.spread[base + h0]!) * f
     } else if (!Number.isNaN(a) && f < 0.5) {
       cm = a
-      idx = this.index[base + h0]!
+      state = this.state[base + h0]!
       spread = this.spread[base + h0]!
     } else if (!Number.isNaN(b) && f >= 0.5) {
       cm = b
-      idx = this.index[base + h1]!
+      state = this.state[base + h1]!
       spread = this.spread[base + h1]!
     } else {
       return null
     }
-    return { cm, index: idx, spread, forecast: t > this.now }
+    return { cm, state, spread, forecast: t > this.now }
   }
 }

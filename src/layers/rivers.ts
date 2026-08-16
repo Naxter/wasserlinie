@@ -18,8 +18,7 @@ import type { FrameInfo, LayerContext, VisualLayer } from './plugin'
 
 const WIDTH_PX: Record<number, number> = { 200: 12, 125: 9, 42: 6.5, 12: 5 }
 const BASE_WIDTH = 0.5
-const BACKGROUND_INDEX = 0.2
-const BACKGROUND_INTENSITY = 0.5
+const BACKGROUND_INTENSITY = 0.6
 const HOUR = 3_600_000
 
 function widthFor(cls: number): number {
@@ -113,11 +112,12 @@ export class RiverLayer implements VisualLayer {
   private flushBackground(): void {
     for (const [cls, instances] of this.background) {
       const material = createRiverMaterial({
-        field: stillField(BACKGROUND_INDEX, this.encoding!),
+        field: stillField(0, this.encoding!),
         encoding: this.encoding!,
         lengthKm: 60,
         baseWidth: BASE_WIDTH * (cls >= 125 ? 0.9 : 0.75),
         intensity: BACKGROUND_INTENSITY,
+        known: false,
       })
       this.still.push(material)
       this.addPrimitive(instances, material)

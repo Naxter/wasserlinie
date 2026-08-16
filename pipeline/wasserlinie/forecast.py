@@ -166,8 +166,8 @@ def predict(
     # measurements, so a predicted level is unusual by the same yardstick.
     curves = anomaly.station_curves(stations)
     station_col = df["station"].to_numpy()
-    for column, source in (("rank", "p50"), ("rankLow", "p10"), ("rankHigh", "p90")):
-        df[column] = anomaly.ranks_for(curves, station_col, df[source].to_numpy())
+    for column, source in (("state", "p50"), ("stateLow", "p10"), ("stateHigh", "p90")):
+        df[column] = anomaly.states_for(curves, station_col, df[source].to_numpy())
     return df
 
 

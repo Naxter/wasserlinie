@@ -1,5 +1,7 @@
 import { useApp } from '../store'
+import { Legend } from './Legend'
 import { StationPanel } from './StationPanel'
+import { StatusLine } from './StatusLine'
 import { TimeBar } from './TimeBar'
 
 export function App() {
@@ -16,7 +18,7 @@ export function App() {
       <header className="masthead">
         <div className="title">
           <h1>Wasserlinie</h1>
-          <p>Das deutsche Flussnetz, gespeist aus {stations.length || '…'} Pegeln.</p>
+          <StatusLine />
         </div>
         <nav className="layers" aria-label="Ebenen">
           <button aria-pressed={layers.rivers} onClick={() => toggleLayer('rivers')}>
@@ -29,6 +31,7 @@ export function App() {
       </header>
 
       <StationPanel />
+      <Legend />
 
       {hoveredStation && <div className="hovername">{hoveredStation.name.toLowerCase()}</div>}
 
