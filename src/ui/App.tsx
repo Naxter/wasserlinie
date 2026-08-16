@@ -36,7 +36,13 @@ export function App() {
       <TimeBar />
 
       {status && <div className="status">{status}</div>}
-      {error && <div className="status error">{error}</div>}
+      {error && (
+        <div className="status error">
+          {error.split('\n').map((line) => (
+            <div key={line}>{line}</div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

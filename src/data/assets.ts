@@ -6,8 +6,21 @@ export function dataUrl(path: string): string {
   return `${DATA_URL.replace(/\/$/, '')}/${path}`
 }
 
+/** Thrown when the data assets are simply not there, which needs its own advice. */
+export class MissingDataError extends Error {
+  constructor(readonly path: string) {
+    super(
+      `${path} fehlt. Die Daten liegen nicht im Repository — erst die Pipeline laufen lassen:
+` +
+        'cd pipeline && python -m wasserlinie all',
+    )
+    this.name = 'MissingDataError'
+  }
+}
+
 async function fetchJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   const res = await fetch(dataUrl(path), { signal })
+  if (res.status === 404) throw new MissingDataError(path)
   if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`)
   return (await res.json()) as T
 }

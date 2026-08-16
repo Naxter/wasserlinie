@@ -5,6 +5,10 @@ dist/
 .env
 .env.local
 
+# Generated data. The pipeline rebuilds all of it; see the README.
+public/data/*
+!public/data/.gitkeep
+
 # Pipeline
 pipeline/.venv/
 pipeline/cache/

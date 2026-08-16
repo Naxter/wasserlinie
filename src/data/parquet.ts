@@ -1,6 +1,6 @@
 import { parquetRead } from 'hyparquet'
 import { compressors } from 'hyparquet-compressors'
-import { dataUrl } from './assets'
+import { MissingDataError, dataUrl } from './assets'
 
 // Both parquet files are small enough to fetch whole and read column by
 // column. Reading columns instead of rows keeps 500k readings out of the heap
@@ -16,6 +16,7 @@ export interface Series {
 
 async function fetchBuffer(path: string, signal?: AbortSignal): Promise<ArrayBuffer> {
   const res = await fetch(dataUrl(path), { signal })
+  if (res.status === 404) throw new MissingDataError(path)
   if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`)
   return res.arrayBuffer()
 }

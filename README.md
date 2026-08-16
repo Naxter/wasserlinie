@@ -75,18 +75,9 @@ time. Interpolating between gauges happens once, in Python, not per frame.
 
 ## Quickstart
 
-The repository ships a data snapshot, so the app runs without any credentials.
-
-```bash
-npm install
-npm run dev
-```
-
-Open <http://localhost:5173>. Terrain tiles stream from AWS on first view.
-
-## Refreshing the data
-
-The pipeline lives in `pipeline/` and needs Python 3.11+.
+The data is not in the repository — it is rebuilt from public sources, so the
+first step is to fetch it. You need Node 22+ and Python 3.11+; no accounts and
+no API keys.
 
 ```bash
 cd pipeline
@@ -94,6 +85,20 @@ python -m venv .venv && . .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 python -m wasserlinie all
 ```
+
+That writes everything the app needs into `public/data/`. It takes a few
+minutes, most of it a one-off 56 MB download of the river geometry. Then:
+
+```bash
+npm install
+npm run dev
+```
+
+Open <http://localhost:5173>. Terrain tiles stream from AWS on first view. If
+you start the app before the pipeline has run, it says so and tells you what to
+run.
+
+## The pipeline
 
 `all` runs four steps, each usable on its own:
 
@@ -103,13 +108,22 @@ python -m wasserlinie all
 | `rivers`   | Downloads BKG DLM1000 (56 MB, cached), merges river axes, skeletonises wide rivers that only exist as polygons, snaps gauges onto them → `rivers.json`, `germany.json`. |
 | `forecast` | Trains three quantile GBMs on all inland stations at once, calibrates the band against held-out hours and writes a run into `forecast/` plus `manifest.json`. |
 | `field`    | Interpolates levels along every gauged river for each 6-hour step → `field.bin`, `field.json`.        |
-| `backtest` | Not part of `all`: retrains on a held-out split and rewrites `docs/forecast-skill.md`. |
 
-PEGELONLINE only serves about a month of history per request; the 90-day
-window fills up by running `fetch` daily. The included
-[workflow](.github/workflows/data.yml) does that every morning and commits
-the snapshot. Point the app at a different data location with
-`VITE_DATA_URL` — see `.env.example`.
+Two more are deliberately outside `all`, because each is a long job you run
+when you mean to:
+
+| Step       | What it does                                                                                        |
+| ---------- | --------------------------------------------------------------------------------------------------- |
+| `history`  | Downloads every gauge's readings back to 1 January 2000 through PEGELONLINE's archive and derives `seasonal.parquet` — what counts as normal *for this time of year*. About an hour for all 691 gauges, cached per gauge, so it resumes and a second run is free. |
+| `backtest` | Retrains on a held-out split and rewrites [docs/forecast-skill.md](docs/forecast-skill.md).           |
+
+`fetch` keeps the rolling 90-day window topped up and is meant to run daily —
+the REST API only answers for about the last month.
+
+To deploy, run the pipeline wherever you like, put `public/data/` behind a URL
+and build with `VITE_DATA_URL` pointing at it (see `.env.example`). Keeping the
+data out of the repository is deliberate: it changes every day and would bloat
+the history for nothing.
 
 Formats are documented in [docs/data.md](docs/data.md).
 
