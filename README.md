@@ -52,7 +52,9 @@ all ────────── field (interpolate) ────▶ field.bin
 ```
 
 The one rule that matters: React never touches a GPU buffer. The UI reads
-and writes a small store; the scene subscribes to it.
+and writes a small store; the scene subscribes to it. How the pieces fit,
+what runs per frame and where Cesium objects are created and destroyed:
+[docs/architecture.md](docs/architecture.md).
 
 Rivers with gauges each get a tiny texture — position along the river on one
 axis, time on the other, three bytes per cell (level index, measured or
