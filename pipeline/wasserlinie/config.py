@@ -1,0 +1,67 @@
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+HISTORY_DAYS = 90
+FORECAST_HOURS = 72
+FORECAST_STEP_HOURS = 3
+FIELD_STEP_HOURS = 6
+FIELD_SAMPLES = 48
+# The level index (0 = low-water mark, 1 = high-water mark) is packed into a byte over this range.
+INDEX_OFFSET = -0.5
+INDEX_SCALE = 2.5
+
+PEGELONLINE_URL = "https://www.pegelonline.wsv.de/webservices/rest-api/v2"
+DLM1000_URL = "https://daten.gdz.bkg.bund.de/produkte/dlm/dlm1000/aktuell/dlm1000.utm32s.shape.ebenen.zip"
+VG2500_URL = "https://daten.gdz.bkg.bund.de/produkte/vg/vg2500/aktuell/vg2500_12-31.utm32s.shape.zip"
+
+log = logging.getLogger("wasserlinie")
+
+
+@dataclass
+class Paths:
+    out: Path = field(default_factory=lambda: REPO_ROOT / "public" / "data")
+    cache: Path = field(default_factory=lambda: REPO_ROOT / "pipeline" / "cache")
+
+    def __post_init__(self) -> None:
+        self.out = Path(self.out)
+        self.cache = Path(self.cache)
+        self.out.mkdir(parents=True, exist_ok=True)
+        (self.out / "forecast").mkdir(exist_ok=True)
+        self.cache.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def stations(self) -> Path:
+        return self.out / "stations.json"
+
+    @property
+    def levels(self) -> Path:
+        return self.out / "levels.parquet"
+
+    @property
+    def rivers(self) -> Path:
+        return self.out / "rivers.json"
+
+    @property
+    def germany(self) -> Path:
+        return self.out / "germany.json"
+
+    @property
+    def field_meta(self) -> Path:
+        return self.out / "field.json"
+
+    @property
+    def field_bin(self) -> Path:
+        return self.out / "field.bin"
+
+    @property
+    def forecast_dir(self) -> Path:
+        return self.out / "forecast"
+
+    @property
+    def manifest(self) -> Path:
+        return self.forecast_dir / "manifest.json"

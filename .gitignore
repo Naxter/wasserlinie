@@ -17,3 +17,5 @@ Thumbs.db
 .idea/
 .vscode/
 .claude/
+
+*.egg-info/
