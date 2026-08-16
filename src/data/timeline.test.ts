@@ -20,6 +20,8 @@ const station = (uuid: string, low: number | null, high: number | null): Station
   low,
   high,
   ref: low === null ? null : 'mean',
+  marks: {},
+  refYears: null,
   hasData: true,
 })
 

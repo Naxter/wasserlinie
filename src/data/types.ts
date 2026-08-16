@@ -13,6 +13,10 @@ export interface Station {
   low: number | null
   high: number | null
   ref: 'mean' | 'tidal' | 'extremes' | null
+  /** every long-term mark the gauge publishes, in cm */
+  marks: Record<string, number>
+  /** years those marks were computed over */
+  refYears: number | null
   hasData: boolean
 }
 

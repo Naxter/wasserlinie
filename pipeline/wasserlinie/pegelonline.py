@@ -25,12 +25,18 @@ class Station:
     low: float | None  # reference low water (cm)
     high: float | None  # reference high water (cm)
     ref: str | None  # which pair: "mean" (MNW/MHW), "tidal" (MTnw/MThw), "extremes" (NW/HW)
+    marks: dict[str, float]  # every published long-term mark, in cm
+    ref_years: int | None  # years the marks were computed over
 
 
 # Gauge zeros are arbitrary, so raw centimetres are not comparable between
 # stations. Every level is expressed as where it sits between a low- and a
 # high-water reference: 0 at the low mark, 1 at the high mark.
 REFERENCE_PAIRS = (("mean", "MNW", "MHW"), ("tidal", "MTnw", "MThw"), ("extremes", "NW", "HW"))
+
+# Long-term statistics a gauge may publish, used to rank a reading against the
+# gauge's own history (see anomaly.py).
+MARK_KEYS = ("NNW", "MNW", "MW", "MHW", "HHW", "NW", "HW", "NTnw", "MTnw", "MThw", "HThw")
 
 
 def _characteristic(timeseries: dict[str, Any], key: str) -> float | None:
@@ -43,6 +49,25 @@ def _characteristic(timeseries: dict[str, Any], key: str) -> float | None:
 def _gauge_zero(timeseries: dict[str, Any]) -> float | None:
     zero = timeseries.get("gaugeZero") or {}
     return float(zero["value"]) if zero.get("value") is not None else None
+
+
+def _marks(timeseries: dict[str, Any]) -> dict[str, float]:
+    out = {}
+    for key in MARK_KEYS:
+        value = _characteristic(timeseries, key)
+        if value is not None:
+            out[key] = value
+    return out
+
+
+def _reference_years(timeseries: dict[str, Any]) -> int | None:
+    """Longest period any of the averaged marks was computed over."""
+    years = []
+    for cv in timeseries.get("characteristicValues", []):
+        start, end = cv.get("timespanStart"), cv.get("timespanEnd")
+        if start and end:
+            years.append(int(end[:4]) - int(start[:4]) + 1)
+    return max(years) if years else None
 
 
 def _reference(timeseries: dict[str, Any]) -> tuple[float | None, float | None, str | None]:
@@ -73,6 +98,8 @@ def parse_station(raw: dict[str, Any]) -> Station | None:
         low=low,
         high=high,
         ref=ref,
+        marks=_marks(series),
+        ref_years=_reference_years(series),
     )
 
 

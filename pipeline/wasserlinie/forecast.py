@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import HistGradientBoostingRegressor
 
+from . import anomaly
 from .config import FORECAST_HOURS, FORECAST_STEP_HOURS, Paths, log
 from .grid import hourly_index, level_matrix, load_stations
 
@@ -114,7 +115,14 @@ def predict(
     df = pd.DataFrame(rows)
     for c in ("p10", "p50", "p90"):
         df[c] = df[c].astype("float32")
-    return df.sort_values(["station", "ts"]).reset_index(drop=True)
+    df = df.sort_values(["station", "ts"]).reset_index(drop=True)
+    # The forecast is ranked against the same reference curve as the
+    # measurements, so a predicted level is unusual by the same yardstick.
+    curves = anomaly.station_curves(stations)
+    station_col = df["station"].to_numpy()
+    for column, source in (("rank", "p50"), ("rankLow", "p10"), ("rankHigh", "p90")):
+        df[column] = anomaly.ranks_for(curves, station_col, df[source].to_numpy())
+    return df
 
 
 def latest_run(paths: Paths) -> dict[str, Any] | None:
