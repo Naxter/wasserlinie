@@ -15,6 +15,14 @@ const RGB = {
   paper: hexToRgb(color.paper),
 }
 const SEA = mixRgb(RGB.abyss, RGB.chart, 0.45)
+const LINE = mixRgb(RGB.shoal, RGB.paper, 0.35)
+
+function contourInterval(level: number): number {
+  if (level <= 7) return 400
+  if (level <= 9) return 250
+  if (level <= 11) return 150
+  return 75
+}
 const OUTLINE = color.tide + '85'
 const DIM = `rgba(${RGB.abyss.join(',')},${terrain.outsideDim})`
 const EARTH_CIRCUMFERENCE = 2 * Math.PI * Ellipsoid.WGS84.maximumRadius
@@ -126,6 +134,7 @@ function shade(h: Float32Array, out: Uint8ClampedArray, y: number, level: number
   const [lx, ly, lz] = light
   // Coarse tiles smooth the slopes away, so overview levels get more gain.
   const gain = 2 + Math.max(0, 9 - level) * 0.45
+  const contour = contourInterval(level)
   for (let row = 0; row < size; row++) {
     const merc = (y + (row + 0.5) / size) / n
     const lat = Math.atan(Math.sinh(Math.PI * (1 - 2 * merc)))
@@ -144,17 +153,31 @@ function shade(h: Float32Array, out: Uint8ClampedArray, y: number, level: number
       const inv = 1 / Math.sqrt(dzdx * dzdx + dzdy * dzdy + 1)
       const nl = (-dzdx * lx - dzdy * ly + lz) * inv
       const bright = 0.42 + 0.92 * Math.max(0, nl)
+      let cr: number
+      let cg: number
+      let cb: number
       if (height <= terrain.seaLevel) {
         // Sea, but also open-pit mines: keep the shading so a hole reads as a hole.
-        out[o] = SEA[0] * bright
-        out[o + 1] = SEA[1] * bright
-        out[o + 2] = SEA[2] * bright
+        cr = SEA[0] * bright
+        cg = SEA[1] * bright
+        cb = SEA[2] * bright
       } else {
         const r = rampIndex(height)
-        out[o] = ramp[r]! * bright
-        out[o + 1] = ramp[r + 1]! * bright
-        out[o + 2] = ramp[r + 2]! * bright
+        cr = ramp[r]! * bright
+        cg = ramp[r + 1]! * bright
+        cb = ramp[r + 2]! * bright
+        // Faint contour lines, the way a chart draws depth: a pixel sits on a
+        // line where the next pixel east or south crosses the interval.
+        const band = Math.floor(height / contour)
+        if (band !== Math.floor(h[row * size + right]! / contour) || band !== Math.floor(h[down * size + col]! / contour)) {
+          cr = cr * 0.76 + LINE[0] * 0.24
+          cg = cg * 0.76 + LINE[1] * 0.24
+          cb = cb * 0.76 + LINE[2] * 0.24
+        }
       }
+      out[o] = cr
+      out[o + 1] = cg
+      out[o + 2] = cb
       out[o + 3] = 255
     }
   }
