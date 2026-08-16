@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { anomalyRamp, unknownColor } from '../tokens'
-import { RAMP_MAX, RAMP_MIN, RAMP_WIDTH, rampCss, rampPixels, sampleRamp } from './ramp'
+import { RAMP_MAX, RAMP_MIN, RAMP_WIDTH, rampCss, rampGradientCss, rampPixels, sampleRamp } from './ramp'
 
 describe('anomaly ramp', () => {
   it('returns each stop colour at its own state', () => {
@@ -16,12 +16,6 @@ describe('anomaly ramp', () => {
     const right = sampleRamp(0.2)
     expect(left.rgb).toEqual(right.rgb)
     expect(sampleRamp(0).rgb).toEqual(left.rgb)
-  })
-
-  it('is dim and slow when dry, bright and fast when wet', () => {
-    expect(sampleRamp(-1).glow).toBeLessThan(sampleRamp(0).glow)
-    expect(sampleRamp(1).glow).toBeGreaterThan(sampleRamp(0).glow)
-    expect(sampleRamp(-1).speed).toBeLessThan(sampleRamp(1).speed)
   })
 
   it('clamps beyond the ends instead of extrapolating a colour', () => {
@@ -47,5 +41,33 @@ describe('ramp texture', () => {
     const wet = sampleRamp(RAMP_MAX)
     const last = (RAMP_WIDTH * 2 - 1) * 4
     expect([px[last], px[last + 1], px[last + 2]]).toEqual(wet.rgb.map(Math.round))
+  })
+})
+
+describe('ramp semantics', () => {
+  it('is warm when dry and cool when wet', () => {
+    const dry = sampleRamp(-1)
+    const wet = sampleRamp(1)
+    expect(dry.rgb[0]).toBeGreaterThan(dry.rgb[2]) // red beats blue
+    expect(wet.rgb[2]).toBeGreaterThan(wet.rgb[0]) // blue beats red
+  })
+
+  it('is dimmest at normal and brightest at both extremes', () => {
+    const normal = sampleRamp(0).glow
+    expect(sampleRamp(-1).glow).toBeGreaterThan(normal)
+    expect(sampleRamp(1).glow).toBeGreaterThan(normal)
+    // A record low must not be drawn fainter than a record high.
+    expect(sampleRamp(-1).glow).toBeCloseTo(sampleRamp(1).glow, 5)
+  })
+
+  it('still runs slow when dry and fast when full', () => {
+    expect(sampleRamp(-1).speed).toBeLessThan(sampleRamp(0).speed)
+    expect(sampleRamp(1).speed).toBeGreaterThan(sampleRamp(0).speed)
+  })
+
+  it('gives the legend the same colours as the map', () => {
+    const css = rampGradientCss(4)
+    const mid = sampleRamp(0).rgb.map(Math.round).join(',')
+    expect(css).toContain(`rgb(${mid}) 50.0%`)
   })
 })

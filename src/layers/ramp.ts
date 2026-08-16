@@ -1,4 +1,5 @@
-import { anomalyRamp, hexToRgb, mixRgb, unknownColor } from '../tokens'
+import { anomalyRamp, hexToRgb, unknownColor } from '../tokens'
+import { mixOklab } from './oklab'
 
 // The ramp lives in tokens.ts as data. Here it becomes two things: a texture
 // the shader samples, and a plain function the UI and the gauge layer use, so
@@ -24,10 +25,25 @@ export function sampleRamp(state: number): RampSample {
   const b = stops[i + 1]!
   const t = b.state === a.state ? 0 : (s - a.state) / (b.state - a.state)
   return {
-    rgb: mixRgb(a.rgb, b.rgb, t),
+    rgb: mixOklab(a.rgb, b.rgb, t),
     glow: a.glow + (b.glow - a.glow) * t,
     speed: a.speed + (b.speed - a.speed) * t,
   }
+}
+
+/**
+ * The legend has to show the ramp the map actually uses. A CSS gradient would
+ * interpolate in sRGB and drift away from the Oklab one, so the stops are
+ * sampled from the same function the shader texture is built from.
+ */
+export function rampGradientCss(steps = 24): string {
+  const parts: string[] = []
+  for (let i = 0; i <= steps; i++) {
+    const f = i / steps
+    const { rgb } = sampleRamp(RAMP_MIN + f * (RAMP_MAX - RAMP_MIN))
+    parts.push(`rgb(${rgb.map(Math.round).join(',')}) ${(f * 100).toFixed(1)}%`)
+  }
+  return `linear-gradient(90deg, ${parts.join(', ')})`
 }
 
 export function rampCss(state: number | null): string {

@@ -17,21 +17,35 @@ export type ColorName = keyof typeof color
 // named levels: -1 its record low, -0.5 mean low water, 0 mean water,
 // +0.5 mean high water, +1 its record high.
 //
-// The normal band is wide and quiet on purpose, so an ordinary day is a calm
-// turquoise country and anything else stands out. Both ends are warm, but the
-// dry end is desaturated and dim while the wet end is saturated and bright —
-// brightness, not hue alone, separates them.
+// Three properties are carried separately so none of them can be misread:
+//
+//   hue    which way. Warm means the water is leaving — sand, then amber, then
+//          the scorched red of a record low. Cool means it is rising, up to a
+//          near-white blue. Nothing warm can ever mean flood.
+//   glow   how unusual, in both directions. Normal is the dimmest point on the
+//          ramp, so a quiet country recedes and any departure lights up. An
+//          earlier version tied glow to the amount of water, which drew record
+//          lows dimmest of all — precisely the thing you want to see.
+//   speed  how much water there is: dry rivers crawl, full ones run.
+//
+// Stops are interpolated in Oklab (see layers/ramp.ts), so the way from amber
+// to turquoise stays clean instead of sinking through grey.
 export const anomalyRamp = [
-  { state: -1.0, color: '#C88A2E', glow: 0.55, speed: 0.3 },
-  { state: -0.5, color: '#A8B072', glow: 0.62, speed: 0.55 },
-  { state: -0.2, color: '#4FD1D9', glow: 0.72, speed: 1.0 },
-  { state: 0.2, color: '#4FD1D9', glow: 0.72, speed: 1.0 },
-  { state: 0.5, color: '#E0632B', glow: 0.88, speed: 1.6 },
-  { state: 1.0, color: '#E8324A', glow: 1.0, speed: 2.2 },
+  { state: -1.0, color: '#F04A24', glow: 1.0, speed: 0.25 },
+  { state: -0.7, color: '#EF8B34', glow: 0.82, speed: 0.4 },
+  { state: -0.5, color: '#E4BA5C', glow: 0.68, speed: 0.55 },
+  { state: -0.2, color: '#4FD1D9', glow: 0.5, speed: 0.85 },
+  { state: 0.2, color: '#4FD1D9', glow: 0.5, speed: 1.05 },
+  { state: 0.5, color: '#4BA3F0', glow: 0.78, speed: 1.5 },
+  { state: 1.0, color: '#C4E9FF', glow: 1.0, speed: 2.2 },
 ] as const
 
-/** Gauges with no reference levels get this: a statement that we cannot say. */
-export const unknownColor = '#6E7A85'
+/**
+ * Rivers and gauges we cannot judge. It has to sit clearly *above* the terrain
+ * in brightness — a grey darker than the ground turns the unmeasured network
+ * into dark cracks instead of quiet water.
+ */
+export const unknownColor = '#93AAB8'
 
 /** Beyond these the level counts as worth pointing at. */
 export const unusual = { low: -0.5, high: 0.5 } as const

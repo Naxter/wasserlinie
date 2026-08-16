@@ -38,10 +38,10 @@ czm_material czm_getMaterial(czm_materialInput materialInput) {
   float glow = dynamics.r;
   float speed = dynamics.g * 2.5;
 
-  // Rivers with no reference levels say so by staying grey and still.
+  // Rivers with no reference levels say so by staying grey and still: no
+  // colour, and no travelling pulse, because there is nothing to animate.
   vec3 tint = mix(unknownColor.rgb, rampColor, known);
-  glow = mix(0.5, glow, known);
-  speed = mix(0.6, speed, known);
+  glow = mix(0.85, glow, known);
 
   // Width follows the river, not the water: only a gentle swell so a flood
   // reads as fuller without the network changing shape.
@@ -59,6 +59,7 @@ czm_material czm_getMaterial(czm_materialInput materialInput) {
   float phase = st.s * repeats - clock * speed;
   float pulse = 0.5 + 0.5 * sin(6.2831853 * phase);
   float flow = mix(0.5, 1.0, pulse * pulse);
+  flow = mix(1.0, flow, known);
 
   // Emission only: rivers are lights on the terrain, not lit surfaces, so they
   // stay readable on the night side of the terminator.

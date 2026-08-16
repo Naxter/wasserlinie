@@ -1,7 +1,6 @@
-import { anomalyRamp, unknownColor, unusual } from '../tokens'
-import { RAMP_MAX, RAMP_MIN, rampCss } from '../layers/ramp'
+import { unknownColor, unusual } from '../tokens'
+import { RAMP_MAX, RAMP_MIN, rampCss, rampGradientCss } from '../layers/ramp'
 
-const STOPS = anomalyRamp.map((s) => `${s.color} ${(((s.state - RAMP_MIN) / (RAMP_MAX - RAMP_MIN)) * 100).toFixed(0)}%`)
 const MARKS: { state: number; label: string }[] = [
   { state: -1, label: 'Rekord' },
   { state: unusual.low, label: 'MNW' },
@@ -16,7 +15,7 @@ export function Legend() {
   return (
     <figure className="legend-scale">
       <figcaption>Wasserstand gegenüber den eigenen Kennwerten</figcaption>
-      <div className="bar" style={{ background: `linear-gradient(90deg, ${STOPS.join(', ')})` }}>
+      <div className="bar" style={{ background: rampGradientCss() }}>
         {MARKS.map((m) => (
           <span key={m.state} className="mark" style={{ left: pos(m.state) }} />
         ))}

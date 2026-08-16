@@ -18,7 +18,7 @@ import type { FrameInfo, LayerContext, VisualLayer } from './plugin'
 
 const WIDTH_PX: Record<number, number> = { 200: 12, 125: 9, 42: 6.5, 12: 5 }
 const BASE_WIDTH = 0.5
-const BACKGROUND_INTENSITY = 0.6
+const BACKGROUND_INTENSITY = 0.38
 const HOUR = 3_600_000
 
 function widthFor(cls: number): number {
