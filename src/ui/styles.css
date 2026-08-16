@@ -557,3 +557,72 @@ button {
 .credits a {
   color: inherit;
 }
+
+/* Phones ---------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .masthead {
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    gap: 8px;
+  }
+
+  .masthead .title {
+    padding: 7px 10px 8px;
+  }
+
+  .masthead h1 {
+    font-size: 17px;
+  }
+
+  .masthead .title p {
+    display: none;
+  }
+
+  /* The track needs the full width, so the readout moves above it. */
+  .timebar {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    width: auto;
+    transform: none;
+    grid-template-columns: auto 1fr;
+    grid-template-areas: 'play readout' 'track track';
+    gap: 4px 10px;
+    padding: 6px 10px 4px;
+  }
+
+  .timebar .play {
+    grid-area: play;
+  }
+
+  .timebar .readout {
+    grid-area: readout;
+    align-items: flex-start;
+    min-width: 0;
+  }
+
+  .timebar .track {
+    grid-area: track;
+  }
+
+  .panel {
+    top: auto;
+    bottom: 96px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+
+  .credits,
+  .status,
+  .hovername {
+    left: 12px;
+  }
+
+  .status,
+  .hovername {
+    bottom: 150px;
+  }
+}

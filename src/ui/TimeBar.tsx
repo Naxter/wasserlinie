@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef } from 'react'
 import { useApp } from '../store'
 import { formatDate, formatLead, formatShortDate, formatTime, formatWeekday, startOfDay } from './format'
+import { useMediaQuery } from './useMediaQuery'
 
 const DAY = 86_400_000
 
@@ -11,18 +12,20 @@ export function TimeBar() {
   const setSimTime = useApp((s) => s.setSimTime)
   const togglePlay = useApp((s) => s.togglePlay)
   const track = useRef<HTMLDivElement>(null)
+  const narrow = useMediaQuery('(max-width: 640px)')
 
   const ticks = useMemo(() => {
     if (!range) return []
     const out: { t: number; label: string | null }[] = []
     const days = Math.round((range.end - range.start) / DAY)
-    const every = days > 40 ? 7 : days > 16 ? 3 : 1
+    // Labels have to stay far enough apart to read; a phone fits a third of them.
+    const every = (days > 40 ? 7 : days > 16 ? 3 : 1) * (narrow ? 3 : 1)
     let i = 0
     for (let t = startOfDay(range.start) + DAY; t < range.end; t += DAY, i++) {
       out.push({ t, label: i % every === 0 ? formatShortDate(t) : null })
     }
     return out
-  }, [range])
+  }, [range, narrow])
 
   const seek = useCallback(
     (clientX: number) => {

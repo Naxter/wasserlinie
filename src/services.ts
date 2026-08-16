@@ -16,6 +16,7 @@ const listeners = new Set<() => void>()
 
 export function setServices(services: Services): void {
   current = services
+  if (import.meta.env.DEV) Object.assign(window, { wasserlinieServices: services })
   for (const l of listeners) l()
 }
 
