@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import type { DailyTimeline } from './data/dailyTimeline'
 import type { LevelStore } from './data/store'
 import type { TimeSource } from './data/timeline'
 import type { CameraDirector } from './scene/camera'
@@ -9,6 +10,10 @@ import type { CameraDirector } from './scene/camera'
 export interface Services {
   levels: LevelStore
   timeline: TimeSource
+  /** The whole daily record, once it has been fetched. */
+  history: DailyTimeline | null
+  /** Fetches it. Safe to call repeatedly; the work happens once. */
+  openHistory: () => Promise<void>
   director: CameraDirector
 }
 

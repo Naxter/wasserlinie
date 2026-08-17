@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useServices } from '../services'
 import { useApp } from '../store'
 import { Chart } from './Chart'
@@ -19,6 +19,7 @@ export function StationPanel() {
   const range = useApp((s) => s.range)
   const select = useApp((s) => s.select)
   const run = useApp((s) => s.run)
+  const loadingHistory = useApp((s) => s.loadingHistory)
   const services = useServices()
 
   const station = stations.find((s) => s.uuid === selected) ?? null
@@ -27,6 +28,25 @@ export function StationPanel() {
       station && services
         ? { readings: services.levels.readings(station.uuid), forecast: services.levels.forecastFor(station.uuid) }
         : null,
+    [station, services],
+  )
+
+  // The whole record, once it is in memory. Nothing is fetched just because a
+  // panel opened — the reader asks for it.
+  const daily = useMemo(() => {
+    if (!station || !services?.history) return []
+    const slot = services.history.slotOf(station.uuid)
+    return slot === undefined ? [] : services.history.series(slot)
+  }, [station, services])
+
+  const stateAt = useCallback(
+    (t: number): number | null => {
+      if (!station || !services) return null
+      const source = services.history ?? services.timeline
+      const slot = source.slotOf(station.uuid)
+      const sample = slot === undefined ? null : source.sample(slot, t)
+      return sample && !Number.isNaN(sample.state) ? sample.state : null
+    },
     [station, services],
   )
 
@@ -106,12 +126,18 @@ export function StationPanel() {
       <Chart
         station={station}
         readings={series.readings}
+        daily={daily}
         forecast={series.forecast}
-        start={range.start}
         now={range.now}
-        end={range.end}
         simTime={simTime}
+        stateAt={stateAt}
       />
+
+      {daily.length === 0 && (
+        <button className="load-history" onClick={() => void services.openHistory()} disabled={loadingHistory}>
+          {loadingHistory ? 'lädt …' : 'Ganzen Verlauf seit 2000 laden'}
+        </button>
+      )}
 
       <div className="legend">
         <span>

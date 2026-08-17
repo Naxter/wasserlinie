@@ -54,30 +54,40 @@ export async function startApp(sceneEl: HTMLElement, creditsEl: HTMLElement): Pr
   host.add(new GaugeLayer())
   const unbindPicking = bindPicking(viewer.scene)
 
-  setServices({ levels, timeline, director })
+  // The long view is several megabytes, so it is fetched the first time it is
+  // asked for — by the mode toggle or by the chart — and kept afterwards.
+  let history: DailyTimeline | null = null
+  let active: TimeSource = timeline
+  let fetching: Promise<DailyTimeline> | null = null
 
-  // The long view is six megabytes, so it is fetched the first time it is
-  // asked for and kept afterwards.
-  let history: TimeSource | null = null
-  let fetching: Promise<TimeSource> | null = null
-  const openHistory = async (): Promise<TimeSource> => {
+  const publish = (): void => setServices({ levels, timeline: active, history, openHistory, director })
+
+  const load = async (): Promise<DailyTimeline> => {
     if (history) return history
     fetching ??= loadHistory().then((h) => new DailyTimeline(stationsFile.stations, h))
     store.getState().setLoadingHistory(true)
     try {
       history = await fetching
+      publish()
       return history
     } finally {
       store.getState().setLoadingHistory(false)
     }
   }
 
+  async function openHistory(): Promise<void> {
+    await load()
+  }
+
   const useSource = (source: TimeSource): void => {
+    active = source
     host.setTimeline(source)
-    setServices({ levels, timeline: source, director })
+    publish()
     store.getState().setRange({ start: source.start, now: source.now, end: source.end })
     store.getState().setSimTime(source.now)
   }
+
+  publish()
 
   const unsubscribe = store.subscribe((s, prev) => {
     if (s.selected && s.selected !== prev.selected) {
@@ -87,7 +97,7 @@ export async function startApp(sceneEl: HTMLElement, creditsEl: HTMLElement): Pr
     if (s.mode !== prev.mode) {
       if (s.mode === 'live') useSource(timeline)
       else {
-        void openHistory().then(useSource, (err: unknown) => {
+        void load().then(useSource, (err: unknown) => {
           console.error('the long view could not be loaded', err)
           store.getState().setMode('live')
         })

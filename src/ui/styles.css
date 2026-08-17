@@ -382,11 +382,86 @@ button {
   color: var(--ink);
 }
 
+.panel .chart-figure {
+  margin: 12px 0 0;
+}
+
 .panel .chart {
   display: block;
   width: 100%;
   height: auto;
   overflow: visible;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* The hover readout sits under the chart rather than floating over it: a
+   tooltip that covers the curve hides the thing being read. */
+.chart-figure .readout {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-height: 18px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.chart-figure .readout b {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.chart-figure .readout .verdict {
+  margin-left: auto;
+  text-align: right;
+  color: var(--ink);
+}
+
+.chart-figure .readout .hint {
+  font-size: 10px;
+  color: var(--ink-faint);
+}
+
+.chart .hourly {
+  stroke-width: 1.1;
+  stroke-opacity: 0.85;
+}
+
+.chart .hit line {
+  stroke: var(--ink);
+  stroke-width: 1;
+  stroke-opacity: 0.5;
+}
+
+.chart .hit circle {
+  fill: var(--ink);
+}
+
+.panel .load-history {
+  all: unset;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 10px;
+  padding: 6px 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+
+.panel .load-history:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.panel .load-history:disabled {
+  cursor: default;
+  color: var(--ink-faint);
 }
 
 .chart .grid {
