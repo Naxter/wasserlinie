@@ -50,8 +50,11 @@ export const unknownColor = '#93AAB8'
 /** Beyond these the level counts as worth pointing at. */
 export const unusual = { low: -0.5, high: 0.5 } as const
 
+// Names and readings are set like the sounding numbers on a nautical chart:
+// a document serif, with the sans kept for running text and the mono for
+// labels and anything that has to line up in a column.
 export const font = {
-  display: "'Bricolage Grotesque Variable', 'Inter Tight Variable', sans-serif",
+  display: "'Source Serif 4 Variable', 'Bricolage Grotesque Variable', serif",
   body: "'Inter Tight Variable', system-ui, sans-serif",
   mono: "'IBM Plex Mono', ui-monospace, monospace",
 } as const

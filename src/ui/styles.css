@@ -1,17 +1,24 @@
 @import '@fontsource-variable/bricolage-grotesque';
 @import '@fontsource-variable/inter-tight';
+@import '@fontsource-variable/source-serif-4';
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/500.css';
 
-/* The map is the dark stage; everything the user reads sits on chart-paper
-   labels: cream ground, ink type, hard edges, no blur, no glow. */
+/* Read like a nautical chart: names and soundings set in a document serif,
+   labels in spaced monospace capitals, and surfaces that are deep ink rather
+   than boxes — a hairline on the edge, a shadow underneath, no blur, no glow.
+   `--ink` is always the foreground and `--paper` always the literal cream, so
+   the whole sheet inverts from these four lines. */
 
 :root {
-  --ink: var(--chart);
-  --ink-soft: color-mix(in srgb, var(--ink) 58%, var(--paper));
-  --ink-faint: color-mix(in srgb, var(--ink) 30%, var(--paper));
-  --rule: color-mix(in srgb, var(--ink) 38%, var(--paper));
-  --label-shadow: 2px 2px 0 color-mix(in srgb, var(--abyss) 55%, transparent);
+  --ink: var(--paper);
+  --surface: color-mix(in srgb, var(--abyss) 88%, transparent);
+  --ink-soft: color-mix(in srgb, var(--ink) 62%, var(--abyss));
+  --ink-faint: color-mix(in srgb, var(--ink) 38%, var(--abyss));
+  --rule: color-mix(in srgb, var(--ink) 16%, transparent);
+  --label-shadow: 0 14px 34px -14px rgb(0 0 0 / 0.9);
+  /* Uppercase monospace labels; used often enough to name once. */
+  --label-tracking: 0.14em;
 }
 
 * {
@@ -71,11 +78,14 @@ button {
 .legend-scale,
 .status,
 .hovername {
-  background: var(--paper);
+  background: var(--surface);
   color: var(--ink);
-  border: 1px solid var(--rule);
-  border-radius: 2px;
-  box-shadow: var(--label-shadow);
+  border: none;
+  border-radius: 0;
+  /* The hairline is part of the shadow, so nothing gets an outline of its own. */
+  box-shadow:
+    inset 0 0 0 1px var(--rule),
+    var(--label-shadow);
 }
 
 /* Layout ---------------------------------------------------------- */
@@ -150,13 +160,16 @@ button {
 }
 
 .timebar .readout .date {
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  font-size: 18px;
   color: var(--ink);
 }
 
 .timebar .readout .kind {
-  font-size: 10.5px;
-  letter-spacing: 0.06em;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: var(--label-tracking);
   text-transform: uppercase;
   color: var(--ink-soft);
 }
@@ -174,30 +187,31 @@ button {
 }
 
 .track:focus-visible .handle {
-  box-shadow: 0 0 0 2px var(--paper), 0 0 0 3px var(--ink);
+  box-shadow: 0 0 0 2px var(--abyss), 0 0 0 3px var(--ink);
 }
 
+/* A drawn line, not a filled bar: inverted, a solid rail reads as a slab. */
 .track .rail {
   position: absolute;
   left: 0;
   right: 0;
-  top: 11px;
-  height: 6px;
-  border: 1px solid var(--ink);
+  top: 13px;
+  height: 3px;
+  background: color-mix(in srgb, var(--ink) 16%, transparent);
   overflow: hidden;
 }
 
 .track .rail .past {
   position: absolute;
   inset: 0 auto 0 0;
-  background: var(--ink);
+  background: color-mix(in srgb, var(--ink) 72%, transparent);
 }
 
 .track .rail .future {
   position: absolute;
   inset: 0 0 0 auto;
   background: repeating-linear-gradient(-55deg, var(--ink) 0 1px, transparent 1px 5px);
-  opacity: 0.55;
+  opacity: 0.4;
 }
 
 .track .ticks {
@@ -259,8 +273,8 @@ button {
   height: 12px;
   margin-left: -6px;
   border-radius: 50%;
-  background: var(--paper);
-  border: 2px solid var(--ink);
+  background: var(--tide);
+  border: 2px solid var(--abyss);
 }
 
 /* Station panel --------------------------------------------------- */
@@ -270,14 +284,17 @@ button {
 .panel h2 {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 18px;
-  line-height: 1.15;
+  font-weight: 400;
+  font-size: 26px;
+  line-height: 1.1;
 }
 
 .panel .water {
-  margin-top: 2px;
-  font-size: 12px;
+  margin-top: 3px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
   color: var(--ink-soft);
 }
 
@@ -291,10 +308,10 @@ button {
 }
 
 .panel .value strong {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums slashed-zero;
-  font-weight: 500;
-  font-size: 30px;
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+  font-size: 46px;
   line-height: 1;
   color: var(--ink);
 }
@@ -540,10 +557,10 @@ button {
 .masthead h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 21px;
+  font-weight: 400;
+  font-size: 30px;
   line-height: 1;
-  letter-spacing: -0.006em;
+  letter-spacing: 0.005em;
 }
 
 /* Status line ----------------------------------------------------- */
@@ -703,8 +720,8 @@ button {
 .anomalies h2 {
   margin: 0 0 9px;
   font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 15px;
+  font-weight: 400;
+  font-size: 21px;
 }
 
 .anomalies .tabs {
@@ -733,11 +750,11 @@ button {
 .anomalies .tabs button[aria-pressed='true'] {
   background: var(--ink);
   border-color: var(--ink);
-  color: var(--paper);
+  color: var(--abyss);
 }
 
 .anomalies .tabs button[aria-pressed='true'] b {
-  color: var(--paper);
+  color: var(--abyss);
 }
 
 .anomalies .tabs button:disabled {
@@ -804,7 +821,10 @@ button {
 .anomalies .who em,
 .anomalies .what em {
   font-style: normal;
-  font-size: 10.5px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--ink-soft);
   white-space: nowrap;
   overflow: hidden;
@@ -816,8 +836,11 @@ button {
 }
 
 .anomalies .what b {
-  font-weight: 500;
-  font-size: 12.5px;
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+  font-size: 19px;
+  line-height: 1.05;
   color: var(--ink);
 }
 
@@ -918,9 +941,12 @@ button {
 }
 
 .legend-scale figcaption {
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
   color: var(--ink-soft);
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .legend-scale .bar {

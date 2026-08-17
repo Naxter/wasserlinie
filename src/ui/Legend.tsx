@@ -1,11 +1,14 @@
 import { unknownColor, unusual } from '../tokens'
 import { RAMP_MAX, RAMP_MIN, rampCss, rampGradientCss } from '../layers/ramp'
 
+// Neutral wording on purpose: most gauges are ranked against their own record
+// for the date, where these ticks are the 10th, 50th and 90th percentile — not
+// MNW/MW/MHW. Only the handful still on year-round marks would fit those names.
 const MARKS: { state: number; label: string }[] = [
   { state: -1, label: 'Rekord' },
-  { state: unusual.low, label: 'MNW' },
-  { state: 0, label: 'MW' },
-  { state: unusual.high, label: 'MHW' },
+  { state: unusual.low, label: 'selten' },
+  { state: 0, label: 'normal' },
+  { state: unusual.high, label: 'selten' },
   { state: 1, label: 'Rekord' },
 ]
 
@@ -14,7 +17,7 @@ export function Legend() {
   const pos = (state: number) => `${((state - RAMP_MIN) / (RAMP_MAX - RAMP_MIN)) * 100}%`
   return (
     <figure className="legend-scale">
-      <figcaption>Wasserstand gegenüber dem Normalbereich des Pegels</figcaption>
+      <figcaption>Wie ungewöhnlich für diesen Pegel</figcaption>
       <div className="bar" style={{ background: rampGradientCss() }}>
         {MARKS.map((m) => (
           <span key={m.state} className="mark" style={{ left: pos(m.state) }} />
@@ -29,7 +32,6 @@ export function Legend() {
       </div>
       <div className="ends">
         <span>Niedrigwasser</span>
-        <span>normal</span>
         <span>Hochwasser</span>
       </div>
       <p className="note">
