@@ -11,11 +11,9 @@ applyCssTokens()
 const root = document.getElementById('app')!
 const sceneEl = document.createElement('div')
 sceneEl.className = 'scene'
-const creditsEl = document.createElement('div')
-creditsEl.className = 'credits'
 const uiEl = document.createElement('div')
 uiEl.className = 'ui'
-root.append(sceneEl, creditsEl, uiEl)
+root.append(sceneEl, uiEl)
 
 createRoot(uiEl).render(
   <StrictMode>
@@ -25,7 +23,7 @@ createRoot(uiEl).render(
 
 if (import.meta.env.DEV) Object.assign(window, { wasserlinie: { store } })
 
-startApp(sceneEl, creditsEl).catch((err: unknown) => {
+startApp(sceneEl).catch((err: unknown) => {
   console.error(err)
   store.getState().fail(err instanceof Error ? err.message : String(err))
 })

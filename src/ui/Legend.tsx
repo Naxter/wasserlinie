@@ -1,4 +1,4 @@
-import { rampGradientCss } from '../layers/ramp'
+import { rampGradientCss } from '../color/ramp'
 import { Swatch } from './Swatch'
 
 // What sits under these labels is the colour ramp, so the widths have to be

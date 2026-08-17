@@ -1,4 +1,4 @@
-import { rampCss } from '../layers/ramp'
+import { rampCss } from '../color/ramp'
 import { unusual } from '../tokens'
 
 // Colour alone cannot carry the direction. The ramp is well chosen for

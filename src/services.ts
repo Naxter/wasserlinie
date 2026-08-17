@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react'
 import type { DailyTimeline } from './data/dailyTimeline'
 import type { LevelStore } from './data/store'
 import type { TimeSource } from './data/timeline'
-import type { CameraDirector } from './scene/camera'
+import type { MapCamera } from './map/camera'
 
 // What the UI needs once the scene and data are up. Set by startApp(), and
 // again whenever the mode switches the time source; components read them
@@ -14,7 +14,7 @@ export interface Services {
   history: DailyTimeline | null
   /** Fetches it. Safe to call repeatedly; the work happens once. */
   openHistory: () => Promise<void>
-  director: CameraDirector
+  camera: MapCamera
 }
 
 let current: Services | null = null

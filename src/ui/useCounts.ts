@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { isUnusual } from '../layers/gauges'
+import { isUnusual } from '../data/unusual'
 import { useServices } from '../services'
 import { useApp } from '../store'
 import { unusual } from '../tokens'

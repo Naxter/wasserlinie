@@ -98,17 +98,46 @@ export const post = {
   vignette: 0.55,
 } as const
 
+// North-up, no tilt, no rotation: the map is read by comparing places, and a
+// tilt makes the near half of the country bigger than the far half.
+//
+// There is no overview zoom number here on purpose. The country view is fitted
+// to the outline's own bounding box against whatever the panels leave free, so
+// it stays right at any window size instead of being tuned for one.
 export const camera = {
-  // Where the app opens: over the Alps looking north across the country.
-  germany: { lon: 10.4, lat: 45.3, height: 820_000, heading: 0, pitch: -50 },
-  // First frame before the intro flight.
-  approach: { lon: 2.0, lat: 36.0, height: 6_500_000, heading: 15, pitch: -75 },
-  introSeconds: 4.5,
-  flightSeconds: 2.8,
-  idleAfterSeconds: 10,
-  driftRadiansPerSecond: 0.0009,
-  minZoom: 1500,
-  maxZoom: 5_000_000,
+  /** Roughly the middle of the country, for the first frame before the fit. */
+  start: { lon: 10.45, lat: 51.1, zoom: 5 },
+  /** Where a picked gauge is framed. */
+  stationZoom: 9.5,
+  flightSeconds: 1.1,
+  minZoom: 4.5,
+  maxZoom: 13,
+} as const
+
+// The land is a quiet stage: one flat fill inside the border, the sea darker
+// outside it, and no relief at all. Everything bright on the map is data.
+export const map = {
+  land: '#102C3C',
+  landEdge: '#2B5468',
+  sea: '#06121C',
+  /** Rivers with no gauge to judge them by, and the fine network. */
+  quiet: '#5C7788',
+  /** Line widths in pixels at the country view and fully zoomed in. */
+  width: {
+    200: [2.2, 9],
+    125: [1.5, 6.5],
+    42: [0.9, 4],
+    12: [0.5, 2.4],
+  },
+  // Wide enough that the country view fits inside it: max bounds constrain the
+  // *viewport*, not the country, so a box drawn tightly round Germany silently
+  // forces the overview to zoom in until it fits.
+  bounds: { west: -6, east: 28, south: 40, north: 62 },
+  /** Below this zoom the fine network is not drawn at all. */
+  detailFromZoom: 7.5,
+  /** Widths and radii reach their largest value here and stop growing. */
+  maxZoomForWidth: 12,
+  gaugeRadius: [3.2, 7],
 } as const
 
 // Simulated seconds per real second. One rate cannot serve both sliders: the

@@ -2,32 +2,34 @@ import { loadHistory, loadManifest, loadOutline, loadStations } from './data/ass
 import { DailyTimeline } from './data/dailyTimeline'
 import { LevelStore } from './data/store'
 import { Timeline, type TimeSource } from './data/timeline'
-import { GaugeLayer } from './layers/gauges'
-import { LayerHost } from './layers/plugin'
-import { RiverLayer } from './layers/rivers'
-import { CameraDirector } from './scene/camera'
-import { bindPicking } from './scene/picking'
-import { bindClock } from './scene/time'
-import { createViewer } from './scene/viewer'
+import { MapCamera } from './map/camera'
+import { runClock } from './map/clock'
+import { GaugeLayer } from './map/gauges'
+import { bindPicking } from './map/picking'
+import { LayerHost } from './map/plugin'
+import { RiverLayer } from './map/rivers'
+import { boundsOf } from './map/style'
+import { createMap } from './map/viewer'
 import { setServices } from './services'
 import { store } from './store'
-import { camera as cameraTokens, time as timeTokens } from './tokens'
+import { time as timeTokens } from './tokens'
 
 const HOUR = 3_600_000
-const STATION_RANGE_M = 90_000
 
 export interface AppHandles {
   dispose(): void
 }
 
-export async function startApp(sceneEl: HTMLElement, creditsEl: HTMLElement): Promise<AppHandles> {
+export async function startApp(sceneEl: HTMLElement): Promise<AppHandles> {
   const state = store.getState()
   const outline = await loadOutline()
-  const viewer = createViewer({ container: sceneEl, credits: creditsEl, outline: outline.rings })
-  const director = new CameraDirector(viewer)
-  director.jumpTo(cameraTokens.approach)
-  void director.flyTo(cameraTokens.germany, cameraTokens.introSeconds)
-  const unbindClock = bindClock(viewer)
+  const { map, ready } = createMap({ container: sceneEl, rings: outline.rings })
+  if (import.meta.env.DEV) Object.assign(window, { wasserlinieMap: map })
+  // The constructor cannot know about the panels; this frames the country in
+  // the part of the canvas they leave free.
+  const camera = new MapCamera(map, boundsOf(outline.rings))
+  void camera.home(false)
+  const stopClock = runClock()
 
   state.setStatus('Pegel werden geladen')
   const [stationsFile, manifest] = await Promise.all([
@@ -49,10 +51,12 @@ export async function startApp(sceneEl: HTMLElement, creditsEl: HTMLElement): Pr
   state.setRun(levels.forecast ? run : null)
   state.setStatus(null)
 
-  const host = new LayerHost({ viewer, timeline })
+  // Sources cannot be added before the style exists.
+  await ready
+  const host = new LayerHost({ map, timeline })
   host.add(new RiverLayer())
   host.add(new GaugeLayer())
-  const unbindPicking = bindPicking(viewer.scene)
+  const unbindPicking = bindPicking(map)
 
   // The long view is several megabytes, so it is fetched the first time it is
   // asked for — by the mode toggle or by the chart — and kept afterwards.
@@ -60,7 +64,7 @@ export async function startApp(sceneEl: HTMLElement, creditsEl: HTMLElement): Pr
   let active: TimeSource = timeline
   let fetching: Promise<DailyTimeline> | null = null
 
-  const publish = (): void => setServices({ levels, timeline: active, history, openHistory, director })
+  const publish = (): void => setServices({ levels, timeline: active, history, openHistory, camera })
 
   const load = async (): Promise<DailyTimeline> => {
     if (history) return history
@@ -92,7 +96,7 @@ export async function startApp(sceneEl: HTMLElement, creditsEl: HTMLElement): Pr
   const unsubscribe = store.subscribe((s, prev) => {
     if (s.selected && s.selected !== prev.selected) {
       const station = s.stations.find((st) => st.uuid === s.selected)
-      if (station) void director.flyToPoint(station.lon, station.lat, STATION_RANGE_M)
+      if (station) void camera.flyToPoint(station.lon, station.lat)
     }
     if (s.mode !== prev.mode) {
       if (s.mode === 'live') useSource(timeline)
@@ -109,9 +113,9 @@ export async function startApp(sceneEl: HTMLElement, creditsEl: HTMLElement): Pr
     dispose() {
       unsubscribe()
       unbindPicking()
-      unbindClock()
+      stopClock()
       host.dispose()
-      viewer.destroy()
+      map.remove()
     },
   }
 }

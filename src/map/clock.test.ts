@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { advance, MAX_FRAME_SECONDS } from './time'
+import { advance, MAX_FRAME_SECONDS } from './clock'
 
 const DAY = 86_400_000
 const t0 = Date.parse('2026-08-17T12:00:00Z')

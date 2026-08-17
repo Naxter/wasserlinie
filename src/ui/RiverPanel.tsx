@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
-import { rampCss } from '../layers/ramp'
-import { sampleRiver } from '../layers/rivers'
+import { rampCss } from '../color/ramp'
+import { sampleRiver } from '../data/profile'
 import { useServices } from '../services'
 import { useApp } from '../store'
 import { classifyShort } from './classify'
