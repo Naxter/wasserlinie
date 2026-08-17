@@ -179,10 +179,15 @@ button {
 
 .timebar {
   position: absolute;
-  left: 50%;
+  /* The warning notice sits bottom-left and reaches 296px in. Centred on the
+     window the bar ran over it on anything narrower than 1570px, so it is
+     centred in what the left column leaves instead — keeping it off the notice
+     by centring would have cost 600px of track. */
+  left: 310px;
+  right: 26px;
   bottom: 24px;
-  transform: translateX(-50%);
-  width: min(980px, calc(100% - 52px));
+  margin: 0 auto;
+  max-width: 980px;
   display: grid;
   grid-template-columns: auto auto 1fr auto;
   align-items: center;
@@ -1505,10 +1510,16 @@ button {
 
   .scene {
     position: sticky;
-    top: 0;
+    /* `inset` has to come first: it is shorthand for all four offsets, so after
+       `top: 0` it sets top back to auto and sticky quietly stops sticking. */
     inset: auto;
+    top: 0;
     height: 42vh;
     min-height: 220px;
+    /* The column has to pass under the map, not over it. Without this the
+       track and the layer toggles paint on top of it: they come later in the
+       document, and among positioned elements at z-index auto that wins. */
+    z-index: 1;
   }
 
   .ui {
@@ -1548,21 +1559,23 @@ button {
     padding: 12px 14px;
   }
 
-  .sidebar {
+  /* The map controls belong to the map, so they go with it. Behind the sidebar
+     they sat under as many as sixty anomaly rows. */
+  .controls {
     order: 4;
+    display: flex;
+    justify-content: flex-start;
+    padding: 0 14px 14px;
+  }
+
+  .sidebar {
+    order: 5;
     flex: 1;
   }
 
   .notice {
-    order: 5;
-    padding: 12px 14px;
-  }
-
-  .controls {
     order: 6;
-    display: flex;
-    justify-content: flex-start;
-    padding: 0 14px 14px;
+    padding: 12px 14px;
   }
 
   .timebar .modes {
