@@ -4,7 +4,6 @@ import {
   Cartesian2,
   Cartesian3,
   Color,
-  HeightReference,
   NearFarScalar,
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
@@ -50,8 +49,39 @@ const UNKNOWN = Color.fromCssColorString(unknownColor)
 const HOVER = Color.fromCssColorString(color.paper)
 const scratch = new Color()
 
-/** Below this height every gauge is shown, not just the notable ones. */
-const ALL_VISIBLE_HEIGHT = 260_000
+/** The quiet gauges fade out between these camera heights instead of popping. */
+const QUIET_NEAR = 220_000
+const QUIET_FAR = 300_000
+
+function clamp01(v: number): number {
+  return v < 0 ? 0 : v > 1 ? 1 : v
+}
+
+/**
+ * Where to hang the billboard.
+ *
+ * Not `CLAMP_TO_GROUND`: that re-clamps every time a terrain tile refines, so
+ * all 691 dots crawl across the map while the camera moves. The gauge datum is
+ * a real height above sea level and never changes. The 86 gauges that publish
+ * none borrow the nearest one that does — they sit on the same rivers, and the
+ * depth test is off anyway, so a few metres out is invisible.
+ */
+function heights(stations: Station[]): number[] {
+  const known = stations.filter((s) => s.zero !== null)
+  return stations.map((s) => {
+    if (s.zero !== null) return s.zero
+    let best = 0
+    let bestGap = Infinity
+    for (const k of known) {
+      const gap = (k.lon - s.lon) ** 2 + (k.lat - s.lat) ** 2
+      if (gap < bestGap) {
+        bestGap = gap
+        best = k.zero!
+      }
+    }
+    return best
+  })
+}
 
 export function isUnusual(state: number): boolean {
   return state <= unusual.low || state >= unusual.high
@@ -69,6 +99,7 @@ export class GaugeLayer implements VisualLayer {
   private timeline: Timeline | null = null
   private collection: BillboardCollection | null = null
   private billboards: Billboard[] = []
+  private sprites: ('crisp' | 'soft')[] = []
   private stations: Station[] = []
   private handler: ScreenSpaceEventHandler | null = null
   private readonly crisp = sprite(false)
@@ -82,12 +113,13 @@ export class GaugeLayer implements VisualLayer {
     this.stations = ctx.timeline.stations
     const collection = new BillboardCollection({ scene: this.scene })
     const scaleByDistance = new NearFarScalar(gauge.nearDistance, 1.0, gauge.farDistance, 0.34)
-    this.billboards = this.stations.map((s) =>
+    const altitude = heights(this.stations)
+    this.sprites = this.stations.map(() => 'crisp')
+    this.billboards = this.stations.map((s, i) =>
       collection.add({
         id: s.uuid,
-        position: Cartesian3.fromDegrees(s.lon, s.lat),
+        position: Cartesian3.fromDegrees(s.lon, s.lat, altitude[i]),
         image: this.crisp,
-        heightReference: HeightReference.CLAMP_TO_GROUND,
         disableDepthTestDistance: Number.POSITIVE_INFINITY,
         scaleByDistance,
         width: gauge.pixelSize * 2,
@@ -124,10 +156,18 @@ export class GaugeLayer implements VisualLayer {
     this.handler = handler
   }
 
-  frame({ simTime, clock }: FrameInfo): void {
+  /** `setImage` every frame re-does an atlas lookup per gauge; only switch on change. */
+  private useSprite(i: number, want: 'crisp' | 'soft'): void {
+    if (this.sprites[i] === want) return
+    this.sprites[i] = want
+    this.billboards[i]!.setImage(want, want === 'crisp' ? this.crisp : this.soft)
+  }
+
+  frame({ simTime }: FrameInfo): void {
     if (!this.timeline || !this.collection?.show || !this.scene) return
     const { hovered, selected, filter } = store.getState()
-    const onlyNotable = this.scene.camera.positionCartographic.height > ALL_VISIBLE_HEIGHT
+    const height = this.scene.camera.positionCartographic.height
+    const quiet = 1 - clamp01((height - QUIET_NEAR) / (QUIET_FAR - QUIET_NEAR))
     for (let i = 0; i < this.billboards.length; i++) {
       const b = this.billboards[i]!
       const st = this.stations[i]!
@@ -140,27 +180,31 @@ export class GaugeLayer implements VisualLayer {
       const state = sample.state
       const known = !Number.isNaN(state)
       const notable = known && isUnusual(state)
-      b.show = passesFilter(state, filter) && (picked || notable || !onlyNotable)
+      // From far out only the notable gauges carry the picture; the rest fade
+      // away over a band of altitude rather than blinking out at one height.
+      const alpha = picked || notable ? 1 : quiet
+      b.show = passesFilter(state, filter) && alpha > 0.02
       if (!b.show) continue
 
       const emphasis = st.uuid === selected ? 1.5 : st.uuid === hovered ? 1.3 : 1
       if (!known) {
-        b.setImage('crisp', this.crisp)
-        b.color = st.uuid === hovered ? HOVER : UNKNOWN
+        this.useSprite(i, 'crisp')
+        b.color = Color.clone(st.uuid === hovered ? HOVER : UNKNOWN, scratch)
+        b.color.alpha = alpha
         b.scale = 0.45 * emphasis
         continue
       }
-      const { rgb, glow, speed } = sampleRamp(state)
-      const pulse = 1 + 0.07 * Math.sin(clock * 6.283 * (0.15 + speed * 0.25) + i)
+      const { rgb, glow } = sampleRamp(state)
       Color.fromBytes(rgb[0], rgb[1], rgb[2], 255, scratch)
-      b.color = st.uuid === hovered ? HOVER : scratch
+      b.color = st.uuid === hovered ? Color.clone(HOVER, scratch) : scratch
+      b.color.alpha = alpha
       if (sample.forecast) {
-        b.setImage('soft', this.soft)
+        this.useSprite(i, 'soft')
         b.scale = (0.6 + 0.7 * glow) * (1 + Math.min(1, sample.spread) * 0.8) * emphasis
       } else {
-        b.setImage('crisp', this.crisp)
+        this.useSprite(i, 'crisp')
         // Notable gauges sit larger so they read before the quiet ones.
-        b.scale = (0.5 + 0.6 * glow) * (notable ? 1.4 : 1) * pulse * emphasis
+        b.scale = (0.5 + 0.6 * glow) * (notable ? 1.4 : 1) * emphasis
       }
     }
   }
@@ -174,5 +218,6 @@ export class GaugeLayer implements VisualLayer {
     if (this.scene && this.collection) this.scene.primitives.remove(this.collection)
     this.collection = null
     this.billboards = []
+    this.sprites = []
   }
 }
