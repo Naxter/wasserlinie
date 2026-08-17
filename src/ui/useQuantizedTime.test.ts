@@ -1,8 +1,42 @@
 import { describe, expect, it } from 'vitest'
 import { store } from '../store'
-import { quantumFor } from './useQuantizedTime'
+import { quantize, quantumFor } from './useQuantizedTime'
 
 const DAY = 86_400_000
+
+describe('quantize', () => {
+  const live = { start: 0, now: 34 * DAY, end: 37 * DAY }
+  const history = { start: 0, now: 9726 * DAY, end: 9726 * DAY }
+
+  it('never rounds a measured reading into the forecast', () => {
+    // On load the slider sits exactly on `now`, and half a step of rounding
+    // used to carry it past — labelling every row a forecast on half of visits.
+    for (let i = 0; i < 500; i++) {
+      const at = live.now - i * 37_000
+      expect(quantize(at, live)).toBeLessThanOrEqual(live.now)
+    }
+  })
+
+  it('never rounds past the end of the daily record', () => {
+    // Past `end` the grid has nothing, so every gauge returned null and the
+    // list emptied out.
+    for (let i = 0; i < 500; i++) {
+      const at = history.now - i * 3_600_000
+      expect(quantize(at, history)).toBeLessThanOrEqual(history.end)
+    }
+  })
+
+  it('still lets the forecast be reached when the slider is really there', () => {
+    const ahead = live.now + 2 * DAY
+    expect(quantize(ahead, live)).toBeGreaterThan(live.now)
+    expect(quantize(ahead, live)).toBeLessThanOrEqual(live.end)
+  })
+
+  it('stays inside the range at the bottom too', () => {
+    expect(quantize(live.start, live)).toBeGreaterThanOrEqual(live.start)
+    expect(quantize(live.start - 5 * DAY, live)).toBeGreaterThanOrEqual(live.start)
+  })
+})
 
 describe('quantumFor', () => {
   it('gives the live window a grain of about a quarter hour', () => {
