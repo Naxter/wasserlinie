@@ -4,7 +4,7 @@ import argparse
 import logging
 import sys
 
-from . import archive, backtest, fetch, field, forecast, rivers
+from . import archive, backtest, daily, fetch, field, forecast, rivers
 from .config import Paths
 
 STEPS = {
@@ -14,10 +14,13 @@ STEPS = {
     "field": field.run,
     "backtest": backtest.run,
     "history": archive.run,
+    "history-grid": daily.run,
 }
 # `backtest` is deliberately not part of `all`: it retrains the model and is
 # something you run when you want to know whether the forecast is any good.
-ORDER = ["fetch", "rivers", "forecast", "field"]
+# `history-grid` is, because it is quick and reads what `history` already
+# downloaded — but it is skipped when there is no archive to read.
+ORDER = ["fetch", "rivers", "forecast", "field", "history-grid"]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -48,8 +51,13 @@ def main(argv: list[str] | None = None) -> int:
     paths = Paths(**kwargs)
 
     steps = ORDER if args.step == "all" else [args.step]
+    log = logging.getLogger("wasserlinie")
     for name in steps:
-        logging.getLogger("wasserlinie").info("== %s", name)
+        # A first run has no archive yet, and `all` must still work without one.
+        if name == "history-grid" and args.step == "all" and not paths.history.exists():
+            log.info("== history-grid skipped, no archive yet (run `wasserlinie history` for the long view)")
+            continue
+        log.info("== %s", name)
         if name == "fetch":
             fetch.run(paths, days=args.days, workers=args.workers)
         elif name == "history":

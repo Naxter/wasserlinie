@@ -54,6 +54,20 @@ class Paths:
         return self.out / "seasonal.parquet"
 
     @property
+    def history_bin(self) -> Path:
+        """State per gauge per day for the whole record; loaded on demand."""
+        return self.out / "history.bin"
+
+    @property
+    def history_meta(self) -> Path:
+        return self.out / "history.json"
+
+    @property
+    def history_dir(self) -> Path:
+        """One daily series in cm per gauge, for the station chart."""
+        return self.out / "history"
+
+    @property
     def rivers(self) -> Path:
         return self.out / "rivers.json"
 
