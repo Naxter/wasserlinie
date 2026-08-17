@@ -100,10 +100,18 @@ export function AnomalyList() {
                   <b>{titleCase(r.name)}</b>
                   <em>{titleCase(r.water)}</em>
                 </span>
-                <span className="what">
-                  <b className="mono">{formatCm(r.cm)} cm</b>
-                  <em className="mono">{r.forecast ? 'Prognose' : (r.reference ?? (classifyShort(r.state) ?? ''))}</em>
-                </span>
+                {/* The long view stores the verdict, not the reading, so the
+                    word takes the place of the number rather than "NaN cm". */}
+                {Number.isFinite(r.cm) ? (
+                  <span className="what">
+                    <b className="mono">{formatCm(r.cm)} cm</b>
+                    <em className="mono">{r.forecast ? 'Prognose' : (r.reference ?? (classifyShort(r.state) ?? ''))}</em>
+                  </span>
+                ) : (
+                  <span className="what verdict-only">
+                    <b>{classifyShort(r.state) ?? ''}</b>
+                  </span>
+                )}
               </button>
             </li>
           ))}

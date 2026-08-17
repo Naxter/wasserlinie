@@ -9,7 +9,6 @@ import {
   ScreenSpaceEventType,
   type Scene,
 } from 'cesium'
-import type { Timeline } from '../data/timeline'
 import type { Station } from '../data/types'
 import { store, type Filter } from '../store'
 import { color, gauge, unknownColor, unusual } from '../tokens'
@@ -96,7 +95,9 @@ function passesFilter(state: number, filter: Filter): boolean {
 export class GaugeLayer implements VisualLayer {
   readonly id = 'gauges' as const
   private scene: Scene | null = null
-  private timeline: Timeline | null = null
+  // Held as the context, not the source itself: the source is swapped when the
+  // mode changes and the layer has to follow.
+  private ctx: LayerContext | null = null
   private collection: BillboardCollection | null = null
   private billboards: Billboard[] = []
   private sprites: ('crisp' | 'soft')[] = []
@@ -109,7 +110,7 @@ export class GaugeLayer implements VisualLayer {
 
   load(ctx: LayerContext): Promise<void> {
     this.scene = ctx.viewer.scene
-    this.timeline = ctx.timeline
+    this.ctx = ctx
     this.stations = ctx.timeline.stations
     const collection = new BillboardCollection({ scene: this.scene })
     const scaleByDistance = new NearFarScalar(gauge.nearDistance, 1.0, gauge.farDistance, 0.34)
@@ -164,7 +165,8 @@ export class GaugeLayer implements VisualLayer {
   }
 
   frame({ simTime }: FrameInfo): void {
-    if (!this.timeline || !this.collection?.show || !this.scene) return
+    if (!this.ctx || !this.collection?.show || !this.scene) return
+    const timeline = this.ctx.timeline
     const { hovered, selected, filter } = store.getState()
     const height = this.scene.camera.positionCartographic.height
     const quiet = 1 - clamp01((height - QUIET_NEAR) / (QUIET_FAR - QUIET_NEAR))
@@ -172,7 +174,7 @@ export class GaugeLayer implements VisualLayer {
       const b = this.billboards[i]!
       const st = this.stations[i]!
       const picked = st.uuid === selected || st.uuid === hovered
-      const sample = this.timeline.sample(i, simTime)
+      const sample = timeline.sample(i, simTime)
       if (!sample) {
         b.show = false
         continue

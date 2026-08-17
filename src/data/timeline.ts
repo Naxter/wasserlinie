@@ -21,6 +21,20 @@ export interface LevelSource {
   eachForecast(visit: (station: string, t: number, cm: number, state: number, spread: number) => void): void
 }
 
+/**
+ * What everything downstream of the slider actually needs. The hourly
+ * `Timeline` and the daily `DailyTimeline` both answer it, so the layers and
+ * the panels never learn which one is behind the map.
+ */
+export interface TimeSource {
+  readonly stations: Station[]
+  readonly start: number
+  readonly now: number
+  readonly end: number
+  slotOf(uuid: string): number | undefined
+  sample(station: number, t: number): Sample | null
+}
+
 // One hourly grid for every station, measurements first, forecast median
 // after `now`. Everything that moves with the time slider reads from here.
 export class Timeline {

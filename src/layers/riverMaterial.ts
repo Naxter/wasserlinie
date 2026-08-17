@@ -23,6 +23,8 @@ export interface RiverMaterialOptions {
 export interface RiverUniforms {
   time: number
   clock: number
+  /** Reassigning this is what makes Cesium upload a new field texture. */
+  field: HTMLCanvasElement | OffscreenCanvas
 }
 
 export function riverUniforms(material: Material): RiverUniforms {

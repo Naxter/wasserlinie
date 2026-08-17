@@ -18,12 +18,12 @@ from .grid import load_stations
 # to 2000 but is a daily mean. So the long view gets its own asset rather than
 # being squeezed into the hourly grid:
 #
-#   history.bin   state per gauge per day, one byte, gauge-major
-#   history.json  which gauges, which days, how to decode
-#   history/<uuid>.bin   that gauge's daily means in cm, for the chart
+#   history.bin     state per gauge per day, one byte, gauge-major
+#   history-cm.bin  the readings themselves, int16, same shape
+#   history.json    which gauges, which days, how to decode
 #
-# 691 gauges x 9,726 days is 6.7 MB raw and about 3 MB gzipped, so it is loaded
-# only when the long view is actually opened.
+# Together about 8 MB gzipped, so they are fetched only when the long view is
+# actually opened, never on first paint.
 
 # 0 is reserved for "no reading", so the scale lives in 1..255 — 255 levels
 # across a three-wide scale, about 0.012 per step. The frontend undoes exactly this.
@@ -96,16 +96,13 @@ def run(paths: Paths) -> None:
     grid[r, c] = encode_state(state.to_numpy())
     paths.history_bin.write_bytes(grid.tobytes())
 
-    # One file per gauge, fetched when a gauge is opened: 19 KB each beats
-    # shipping 13 MB of centimetres nobody has asked for yet.
-    out_dir = paths.history_dir
-    out_dir.mkdir(parents=True, exist_ok=True)
-    for stale in out_dir.glob("*.bin"):
-        stale.unlink()
-    cm_all = np.full((len(uuids), len(days)), CM_MISSING, dtype=np.int16)
-    cm_all[r, c] = np.clip(np.rint(daily["mean"].to_numpy()), -CM_LIMIT, CM_LIMIT).astype(np.int16)
-    for uuid, i in row.items():
-        (out_dir / f"{uuid}.bin").write_bytes(cm_all[i].tobytes())
+    # The readings themselves, same shape. It doubles the long view to about
+    # 8 MB gzipped, which buys exact values in the list and the whole chart
+    # without a request per gauge. Both files are fetched only when the long
+    # view is opened.
+    cm = np.full((len(uuids), len(days)), CM_MISSING, dtype=np.int16)
+    cm[r, c] = np.clip(np.rint(daily["mean"].to_numpy()), -CM_LIMIT, CM_LIMIT).astype(np.int16)
+    paths.history_cm.write_bytes(cm.tobytes())
 
     paths.history_meta.write_text(
         json.dumps(
@@ -125,7 +122,7 @@ def run(paths: Paths) -> None:
     )
     placed = int((grid != NO_DATA).sum())
     log.info(
-        "history.bin: %d gauges × %d days (%s to %s), %d placed (%.0f%%), %.1f MB",
+        "history: %d gauges × %d days (%s to %s), %d placed (%.0f%%), %.1f MB + %.1f MB of readings",
         len(uuids),
         len(days),
         days[0].date(),
@@ -133,4 +130,5 @@ def run(paths: Paths) -> None:
         placed,
         100 * placed / grid.size,
         grid.nbytes / 1e6,
+        cm.nbytes / 1e6,
     )

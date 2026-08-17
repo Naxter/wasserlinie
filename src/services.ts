@@ -1,13 +1,14 @@
 import { useSyncExternalStore } from 'react'
 import type { LevelStore } from './data/store'
-import type { Timeline } from './data/timeline'
+import type { TimeSource } from './data/timeline'
 import type { CameraDirector } from './scene/camera'
 
-// Handles the UI needs once the scene and data are up. Set exactly once by
-// startApp(); components read them through useServices().
+// What the UI needs once the scene and data are up. Set by startApp(), and
+// again whenever the mode switches the time source; components read them
+// through useServices() and re-render when it changes.
 export interface Services {
   levels: LevelStore
-  timeline: Timeline
+  timeline: TimeSource
   director: CameraDirector
 }
 

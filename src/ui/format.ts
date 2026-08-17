@@ -4,6 +4,12 @@ const dateFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-dig
 const shortDateFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', timeZone: ZONE })
 const timeFmt = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: ZONE })
 const weekdayFmt = new Intl.DateTimeFormat('de-DE', { weekday: 'short', timeZone: ZONE })
+const monthFmt = new Intl.DateTimeFormat('de-DE', { month: 'short', timeZone: ZONE })
+const monthYearFmt = new Intl.DateTimeFormat('de-DE', { month: 'short', year: '2-digit', timeZone: ZONE })
+
+export const formatMonth = (t: number): string => monthFmt.format(t).replace('.', '')
+export const formatMonthYear = (t: number): string => monthYearFmt.format(t).replace('.', '')
+export const formatYear = (t: number): string => String(new Date(t).getFullYear())
 
 export const formatDate = (t: number): string => dateFmt.format(t)
 export const formatShortDate = (t: number): string => shortDateFmt.format(t)

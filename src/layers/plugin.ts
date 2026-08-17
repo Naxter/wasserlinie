@@ -1,11 +1,12 @@
 import type { Viewer } from 'cesium'
-import type { Timeline } from '../data/timeline'
+import type { TimeSource } from '../data/timeline'
 import type { AppState, LayerId } from '../store'
 import { store } from '../store'
 
 export interface LayerContext {
   viewer: Viewer
-  timeline: Timeline
+  /** Swapped when the mode changes, so layers must read it per frame. */
+  timeline: TimeSource
 }
 
 export interface FrameInfo {
@@ -44,6 +45,11 @@ export class LayerHost {
     this.layers.set(layer.id, layer)
     if (store.getState().layers[layer.id]) void this.activate(layer)
     else layer.setVisible(false)
+  }
+
+  /** Point every layer at a different time source without reloading geometry. */
+  setTimeline(timeline: TimeSource): void {
+    this.ctx.timeline = timeline
   }
 
   private async activate(layer: VisualLayer): Promise<void> {

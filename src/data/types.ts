@@ -83,3 +83,26 @@ export interface Field {
   /** river id → slot in `data` */
   slot: Map<number, number>
 }
+
+/** The long view: one state byte per gauge per day, back to 2000. */
+export interface HistoryMeta {
+  /** first day, YYYY-MM-DD */
+  t0: string
+  days: number
+  stateOffset: number
+  stateScale: number
+  stateLevels: number
+  /** the byte that means "nothing was measured" */
+  noData: number
+  cmMissing: number
+  /** gauge uuids, in the order their rows appear in history.bin */
+  stations: string[]
+}
+
+export interface History {
+  meta: HistoryMeta
+  /** gauge-major: row `r`, day `d` is `grid[r * meta.days + d]` */
+  grid: Uint8Array
+  /** the readings in cm, same shape; `meta.cmMissing` where there is none */
+  cm: Int16Array
+}

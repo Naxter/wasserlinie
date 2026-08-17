@@ -63,9 +63,9 @@ class Paths:
         return self.out / "history.json"
 
     @property
-    def history_dir(self) -> Path:
-        """One daily series in cm per gauge, for the station chart."""
-        return self.out / "history"
+    def history_cm(self) -> Path:
+        """The same grid in centimetres, for the list and the chart."""
+        return self.out / "history-cm.bin"
 
     @property
     def rivers(self) -> Path:

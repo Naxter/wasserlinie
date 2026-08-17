@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef } from 'react'
 import { useApp } from '../store'
-import { formatDate, formatLead, formatShortDate, formatTime, formatWeekday, startOfDay } from './format'
+import { formatDate, formatLead, formatTime, formatWeekday } from './format'
+import { ticksFor } from './ticks'
 import { useMediaQuery } from './useMediaQuery'
 
 const DAY = 86_400_000
@@ -9,23 +10,15 @@ export function TimeBar() {
   const range = useApp((s) => s.range)
   const simTime = useApp((s) => s.simTime)
   const playing = useApp((s) => s.playing)
+  const mode = useApp((s) => s.mode)
+  const loadingHistory = useApp((s) => s.loadingHistory)
   const setSimTime = useApp((s) => s.setSimTime)
+  const setMode = useApp((s) => s.setMode)
   const togglePlay = useApp((s) => s.togglePlay)
   const track = useRef<HTMLDivElement>(null)
   const narrow = useMediaQuery('(max-width: 640px)')
 
-  const ticks = useMemo(() => {
-    if (!range) return []
-    const out: { t: number; label: string | null }[] = []
-    const days = Math.round((range.end - range.start) / DAY)
-    // Labels have to stay far enough apart to read; a phone fits a third of them.
-    const every = (days > 40 ? 7 : days > 16 ? 3 : 1) * (narrow ? 3 : 1)
-    let i = 0
-    for (let t = startOfDay(range.start) + DAY; t < range.end; t += DAY, i++) {
-      out.push({ t, label: i % every === 0 ? formatShortDate(t) : null })
-    }
-    return out
-  }, [range, narrow])
+  const ticks = useMemo(() => (range ? ticksFor(range.start, range.end, narrow) : []), [range, narrow])
 
   const seek = useCallback(
     (clientX: number) => {
@@ -53,6 +46,14 @@ export function TimeBar() {
 
   return (
     <div className="timebar">
+      <div className="modes" role="group" aria-label="Zeitraum">
+        <button aria-pressed={mode === 'live'} onClick={() => setMode('live')}>
+          Jetzt
+        </button>
+        <button aria-pressed={mode === 'history'} onClick={() => setMode('history')} disabled={loadingHistory}>
+          {loadingHistory ? 'lädt …' : 'Seit 2000'}
+        </button>
+      </div>
       <button className="play" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Abspielen'}>
         {playing ? (
           <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
@@ -78,7 +79,10 @@ export function TimeBar() {
         aria-valuetext={`${formatDate(simTime)} ${formatTime(simTime)}`}
         tabIndex={0}
         onKeyDown={(e) => {
-          const step = e.shiftKey ? DAY : 3_600_000
+          // One arrow press should move one readable step, which is an hour in
+          // the live view and a day across twenty-six years.
+          const fine = mode === 'history' ? DAY : 3_600_000
+          const step = e.shiftKey ? fine * 30 : fine
           if (e.key === 'ArrowLeft') setSimTime(simTime - step)
           if (e.key === 'ArrowRight') setSimTime(simTime + step)
         }}
@@ -97,12 +101,13 @@ export function TimeBar() {
         <div className="now" style={{ left: pos(range.now) }} />
         <div className="handle" style={{ left: pos(simTime) }} />
       </div>
-      <div className="readout mono">
+      <div className="readout">
         <span className="date">
-          {formatWeekday(simTime)} {formatDate(simTime)} · {formatTime(simTime)}
+          {formatWeekday(simTime)} {formatDate(simTime)}
+          {mode === 'live' && ` · ${formatTime(simTime)}`}
         </span>
         <span className="kind" data-kind={forecast ? 'forecast' : 'measured'}>
-          {forecast ? `Prognose ${formatLead(lead)}` : 'gemessen'}
+          {mode === 'history' ? 'Tagesmittel' : forecast ? `Prognose ${formatLead(lead)}` : 'gemessen'}
         </span>
       </div>
     </div>

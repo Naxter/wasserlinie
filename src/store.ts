@@ -12,10 +12,20 @@ export type Filter = 'all' | 'low' | 'high'
 
 export type LayerId = 'rivers' | 'gauges'
 
+/**
+ * `live` is the last month at hourly steps with the forecast on the end;
+ * `history` is the whole record since 2000 at one value a day. Two different
+ * questions, so they get two sliders rather than one compromise.
+ */
+export type Mode = 'live' | 'history'
+
 export interface AppState {
   range: TimeRange | null
   simTime: number
   playing: boolean
+  mode: Mode
+  /** set while the long view is being fetched for the first time */
+  loadingHistory: boolean
   layers: Record<LayerId, boolean>
   stations: Station[]
   run: ForecastRun | null
@@ -27,6 +37,8 @@ export interface AppState {
 
   setRange: (range: TimeRange) => void
   setSimTime: (t: number) => void
+  setMode: (mode: Mode) => void
+  setLoadingHistory: (loading: boolean) => void
   togglePlay: () => void
   toggleLayer: (id: LayerId) => void
   setStations: (stations: Station[]) => void
@@ -44,6 +56,8 @@ export const store = createStore<AppState>((set, get) => ({
   range: null,
   simTime: Date.now(),
   playing: false,
+  mode: 'live',
+  loadingHistory: false,
   layers: { rivers: true, gauges: true },
   stations: [],
   run: null,
@@ -58,6 +72,10 @@ export const store = createStore<AppState>((set, get) => ({
     const { range } = get()
     set({ simTime: range ? clamp(t, range) : t })
   },
+  // Playback does not survive the switch: the two modes run at wildly
+  // different speeds, and carrying it over just looks like a bug.
+  setMode: (mode) => set(mode === get().mode ? {} : { mode, playing: false }),
+  setLoadingHistory: (loadingHistory) => set({ loadingHistory }),
   togglePlay: () => {
     const { playing, simTime, range } = get()
     if (!playing && range && simTime >= range.end - 1) set({ simTime: range.start })
