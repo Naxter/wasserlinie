@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 from typing import Any
 
 import numpy as np
@@ -31,6 +32,10 @@ from .grid import hourly_index, level_matrix, load_stations
 TRAIN_FRACTION = 0.6
 CALIBRATION_FRACTION = 0.15
 ORIGIN_STRIDE_HOURS = 6
+# Skill has to hold from +3 h onwards to count. Taking the furthest lead that
+# happens to beat persistence would advertise +72 h off a single lucky row while
+# the leads in between are negative.
+SKILL_FLOOR = 0.05
 
 
 def evaluate(
@@ -94,8 +99,10 @@ def summarise(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def report(summary: pd.DataFrame, meta: dict[str, Any]) -> str:
-    useful = summary.index[summary["skill_vs_persistence"] > 0.05]
-    horizon = f"+{max(useful)} h" if len(useful) else "under +3 h"
+    skill = summary["skill_vs_persistence"]
+    held = list(itertools.takewhile(lambda lead: skill[lead] > SKILL_FLOOR, summary.index))
+    horizon = f"+{held[-1]} h" if held else "under +3 h"
+    negative = int((summary["skill_vs_persistence"] <= 0).sum())
     lines = [
         "# Forecast skill",
         "",
@@ -109,8 +116,10 @@ def report(summary: pd.DataFrame, meta: dict[str, Any]) -> str:
         "its error there near a metre with the band covering 31% of observations.",
         "",
         "`skill vs persistence` compares the median forecast against assuming the level simply stays",
-        "where it is. Positive means the model adds something, zero or below means it does not. On",
-        f"this history it stops adding anything beyond about **{horizon}**.",
+        "where it is. Positive means the model adds something, zero or below means it does not. It",
+        f"beats persistence without interruption out to **{horizon}**; past that it is a coin toss,",
+        f"negative at {negative} of the {len(summary)} lead times below. Leads further out that look good",
+        "are noise, not range.",
         "",
         f"Coverage is the share of observations inside p10..p90 and should sit near {meta['target']:.2f}.",
         "",
@@ -125,8 +134,14 @@ def report(summary: pd.DataFrame, meta: dict[str, Any]) -> str:
     lines += [
         "",
         f"Generated {meta['generated']} from {meta['history_days']} days of stored history. The window",
-        "is short because PEGELONLINE only serves about a month; it grows as the daily refresh",
-        "accumulates, and these numbers are worth re-checking when it does.",
+        "is short because PEGELONLINE's live API only serves about a month; it grows as the daily",
+        "refresh accumulates, and these numbers are worth re-checking when it does.",
+        "",
+        "`wasserlinie history` does not widen it. That archive reaches back to 2000, but it is one",
+        "value per day, and this model reads the shape of the last three days in hourly steps to",
+        "predict the next three. It is the right raw material for what counts as normal on a date —",
+        "which is what `seasonal.parquet` is — and the wrong shape for an hourly forecast. Using it",
+        "would mean a second model on a daily horizon, judged against daily means.",
         "",
     ]
     return "\n".join(lines)
