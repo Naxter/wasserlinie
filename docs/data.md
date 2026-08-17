@@ -63,14 +63,14 @@ the gauge's own published levels:
 Linear in between, and the slope of the outer segment continues past the ends
 so a record-breaking level keeps moving instead of piling up on the end stop.
 
-It is deliberately **not** a percentile, and deliberately **not** seasonal.
-A percentile would spend 95% of its range on levels above mean low water and
-squash every degree of drought into the bottom few percent — which is exactly
-where the interesting variation sits. A seasonal comparison would need years of
-history per gauge; PEGELONLINE serves roughly a month and does not answer for
-dates in the past, and CAMELS-DE (the one open multi-year German level archive,
-1582 catchments, 1951–2020) matches only 15 of these 691 stations because it
-covers state catchment gauges rather than federal waterways.
+It is deliberately **not** a percentile. A percentile would spend 95% of its
+range on levels above mean low water and squash every degree of drought into the
+bottom few percent — which is exactly where the interesting variation sits.
+
+This scale is long-term but **not seasonal**: low water in August counts the
+same as low water in March. It is the fallback. Where `wasserlinie history` has
+an archive to work with, the seasonal reference below replaces it and the same
+−1..+1 scale means "for this date" instead.
 
 `state` is null when the gauge publishes fewer than three of those marks, when
 MNW and MHW are missing or less than 20 cm apart, when the marks contradict
@@ -161,11 +161,22 @@ at least 5 years and 30 samples in the window to get a row at all; the day is
 sampled every 5 days because the window already smooths the curve, and storing
 all 365 was five times the bytes for no extra information.
 
+Four things disqualify a reference, because the archive is raw and a wrong
+verdict is worse than none. Together they take 432 of the 691 gauges to a
+seasonal scale, 11 to the marks, and leave 248 grey.
+
+| rule | why |
+| --- | --- |
+| within-day swing ≥ 2× the p10–p90 spread | The app places an *instantaneous* reading on a reference built from daily means. Where a gauge moves further within a day than its daily means move between years, the reading encodes the time of day. This is what catches the tideway gauges below Hamburg that publish no `MTnw`/`MThw` to identify themselves by; without it they take over the anomaly list at every low tide. |
+| p90 − p10 < 5 cm | A canal held to the millimetre. A 2 cm wobble would otherwise be drawn as a record for the date. |
+| p90 − p10 > 10 m | A scale error in the raw archive — one gauge's daily means jump between 56 and 562,900 cm. The widest real gauge, the lower Rhine, spans about 3 m. |
+| nearest sampled day more than 15 days off | The window is ±15 days, so beyond that the reference is for a different season. Those readings fall back to the marks, and `basis` reports `marks` for them. |
+
 ## history.parquet (cache only)
 
 Daily means per gauge back to 2000, in `pipeline/cache/`. It is the raw material
-for `seasonal.parquet` and is never shipped: ~36 MB for all gauges, against
-1.2 MB for the reference derived from it.
+for `seasonal.parquet` and is never shipped: 36 MB for all 607 gauges the
+archive holds anything for, against 1.0 MB for the reference derived from it.
 
 | column | type | note |
 | --- | --- | --- |

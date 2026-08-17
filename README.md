@@ -20,10 +20,13 @@ push past "now" and it becomes a forecast, visibly softer the further it goes.
 
 ## What it does
 
-- **A scale you can read.** Every reading is placed on the gauge's own named
-  levels — record low, mean low water, mean water, mean high water, record
-  high — so gauges are comparable without pretending a centimetre means the
-  same thing everywhere.
+- **A scale you can read, for the time of year.** Every reading is placed
+  against what that gauge has actually done around this date since 2000 — a
+  ±15-day window across 27 years of its own record. Low water in August is
+  judged against other Augusts, not against March. Gauges whose archive cannot
+  carry that fall back to their published marks (record low, mean low water,
+  mean water, mean high water, record high), and the app says which of the two
+  it used.
 - **A list of what is actually happening.** Every gauge outside its normal band,
   worst first, each against the mark it is judged by. Click one to fly to it;
   the counts in the header filter the map to the dry or the wet ones.
@@ -33,10 +36,10 @@ push past "now" and it becomes a forecast, visibly softer the further it goes.
   interpolated along the river, and the shader turns it into colour, glow and
   pulse speed. Line width stays absolute, so the Rhine still looks like the
   Rhine at low water.
-- **Grey means we do not know.** Of ~700 PEGELONLINE stations, only those that
-  publish enough long-term statistics get a colour. Tidal gauges are left out
-  on purpose: a level between two tides says where the tide is, not whether
-  anything is wrong.
+- **Grey means we do not know.** Of the 691 PEGELONLINE stations, 443 get a
+  colour. The rest stay grey on purpose: 98 tidal gauges, where a level between
+  two tides says where the tide is rather than whether anything is wrong, and
+  150 with neither a usable archive nor usable marks.
 - **Time is physical.** One slider covers the stored history plus 72 hours
   ahead. The sun follows it, so scrubbing moves the terminator across the
   country.
@@ -46,7 +49,7 @@ push past "now" and it becomes a forecast, visibly softer the further it goes.
   map the future is haze-coloured and soft; the wider the band, the softer the
   line. Measured skill and its limits: [docs/forecast-skill.md](docs/forecast-skill.md).
 - **No servers.** The pipeline writes Parquet and JSON files; the browser
-  queries the Parquet directly with DuckDB-WASM. Static hosting is enough.
+  reads the Parquet directly with hyparquet. Static hosting is enough.
 - **No satellite imagery, no ion token.** Terrain and a hand-made hillshade
   come from public elevation tiles, rendered in the browser.
 
@@ -59,7 +62,7 @@ PEGELONLINE ─ fetch ─────────────────▶   s
               (hourly means, 90 d)       levels.parquet ───────▶          post-processing, clock
 BKG DLM1000 ─ rivers ────────────────▶   rivers.json    ───────▶ layers/  rivers (GLSL field),
               (axes + polygon skeleton)                                    gauges (billboards)
-levels ────── forecast (GBM p10/50/90) ▶ forecast/*.parquet ───▶ data/    DuckDB-WASM, timeline
+levels ────── forecast (GBM p10/50/90) ▶ forecast/*.parquet ───▶ data/    hyparquet, timeline
 all ────────── field (interpolate) ────▶ field.bin + field.json ▶ ui/     React panels, time bar
 ```
 
@@ -114,7 +117,7 @@ when you mean to:
 
 | Step       | What it does                                                                                        |
 | ---------- | --------------------------------------------------------------------------------------------------- |
-| `history`  | Downloads every gauge's readings back to 1 January 2000 through PEGELONLINE's archive and derives `seasonal.parquet` — what counts as normal *for this time of year*. About an hour for all 691 gauges, cached per gauge, so it resumes and a second run is free. |
+| `history`  | Downloads every gauge's readings back to 1 January 2000 through PEGELONLINE's archive and derives `seasonal.parquet` — what counts as normal *for this time of year*. Several hours for all 691 gauges, and the server slows down the longer it runs. Cached per gauge, so it resumes where it stopped and a second run is free. |
 | `backtest` | Retrains on a held-out split and rewrites [docs/forecast-skill.md](docs/forecast-skill.md).           |
 
 `fetch` keeps the rolling 90-day window topped up and is meant to run daily —
@@ -131,22 +134,27 @@ Formats are documented in [docs/data.md](docs/data.md).
 
 - The forecast knows only the recent shape of each level curve. No rainfall,
   no upstream routing. A hindcast on unseen data puts its median error at
-  6–17 cm and shows it beating "assume the level stays put" clearly only in
-  the first few hours; past that it roughly matches it. The p10–p90 band is
-  calibrated to cover 80 %, and does. Full numbers in
+  3–9 cm and shows it beating "assume the level stays put" without interruption
+  only out to +9 h; past that it is a coin toss, negative at 8 of the 24 lead
+  times. The p10–p90 band is calibrated to cover 80 %, and does. Full numbers in
   [docs/forecast-skill.md](docs/forecast-skill.md).
+- The 26 years of archive do not feed the forecast. They are daily means, and
+  the model reads hourly steps; they set what counts as normal for a date, not
+  what happens in the next three days.
 - Tidal gauges get no forecast. The model has no tide features, so on the
   coast it was wrong by about a metre; showing that would have been worse than
   showing nothing.
-- The colour scale is long-term but **not seasonal**: low water in August
-  counts the same as low water in March. A seasonal comparison would need each
-  gauge's own history across many years, and that does not exist openly for
-  this network — PEGELONLINE serves about a month, and CAMELS-DE, the one open
-  multi-year German archive, covers state catchment gauges and matches only 15
-  of these 691 stations. See [docs/data.md](docs/data.md).
-- Roughly half the stations stay grey: 219 publish no long-term marks at all
-  and 98 are tidal. They are still clickable and still show their measured
-  curve, they just get no verdict.
+- The seasonal scale covers 432 of the 691 gauges; 11 more are judged against
+  year-round marks, which cannot tell a dry August from a dry March. The panel
+  says which one a gauge got, and never claims "for this time of year" without
+  a reference within 15 days of the date.
+- The archive is raw, unvalidated data. A few gauges carry scale errors in it —
+  one jumps by a factor of a hundred between eras — and a few tidal gauges
+  publish no tide marks to identify themselves by. Both are filtered out by
+  what the numbers do rather than by what they are labelled; see
+  [docs/data.md](docs/data.md).
+- Grey stations are still clickable and still show their measured curve, they
+  just get no verdict.
 - River geometry is 1:1,000,000. Close up, lines can drift a few hundred
   metres from the actual water.
 
@@ -166,7 +174,7 @@ cd pipeline && ruff check . && pytest
 - Water levels: [PEGELONLINE](https://www.pegelonline.wsv.de) — WSV, free for reuse.
 - River network and country outline: [BKG DLM1000 and VG2500](https://gdz.bkg.bund.de) — © GeoBasis-DE / BKG 2025, [dl-de/by-2-0](https://www.govdata.de/dl-de/by-2-0).
 - Terrain: [AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) — Mapzen, SRTM, EU-DEM and others.
-- Rendering: [CesiumJS](https://cesium.com/platform/cesiumjs/); Parquet in the browser: [DuckDB-WASM](https://duckdb.org/docs/api/wasm/overview).
+- Rendering: [CesiumJS](https://cesium.com/platform/cesiumjs/); Parquet in the browser: [hyparquet](https://github.com/hyparam/hyparquet).
 
 ## License
 
