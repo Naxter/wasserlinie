@@ -13,6 +13,7 @@ import type { Field, River } from '../data/types'
 import { store } from '../store'
 import { createRiverMaterial, riverUniforms, stillField, type FieldEncoding } from './riverMaterial'
 import type { FrameInfo, LayerContext, VisualLayer } from './plugin'
+import { reducedMotion } from '../scene/motion'
 
 // The signature layer. Rivers with gauges each get their own primitive and a
 // texture holding their level field over time; the rest of the network is
@@ -224,6 +225,9 @@ export class RiverLayer implements VisualLayer {
 
   frame({ simTime, clock }: FrameInfo): void {
     if (!this.visible || !this.ctx) return
+    // Holding the clock still freezes the pulse travelling down every
+    // river; the colours stay exactly as they are.
+    if (reducedMotion()) clock = 0
     const source = this.ctx.timeline
     // The baked field only covers the live window. Anywhere outside it the row
     // is built for the day on screen instead.

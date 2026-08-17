@@ -11,6 +11,7 @@ import {
 } from 'cesium'
 import { camera as tokens, terrain } from '../tokens'
 import { cinematicEase, exaggerationFor } from './curves'
+import { flightSeconds, reducedMotion } from './motion'
 
 export interface View {
   lon: number
@@ -63,6 +64,7 @@ export class CameraDirector {
   }
 
   flyTo(view: View, seconds: number = tokens.flightSeconds): Promise<void> {
+    seconds = flightSeconds(seconds)
     return this.fly((done) =>
       this.viewer.camera.flyTo({
         destination: Cartesian3.fromDegrees(view.lon, view.lat, view.height),
@@ -81,6 +83,7 @@ export class CameraDirector {
 
   // Regional flight: frame a point from the current heading, tilted, at a range.
   flyToPoint(lon: number, lat: number, range: number, seconds: number = tokens.flightSeconds): Promise<void> {
+    seconds = flightSeconds(seconds)
     const camera = this.viewer.camera
     const pitch = CesiumMath.toRadians(-38)
     return this.fly((done) =>
@@ -112,7 +115,10 @@ export class CameraDirector {
     const dt = Math.min(0.1, (now - this.lastFrame) / 1000)
     this.lastFrame = now
     this.updateExaggeration(dt)
-    if (!this.flying && now - this.lastInput > tokens.idleAfterSeconds * 1000) this.drift(dt)
+    // Auto-orbiting the ground under someone who stopped to read is the
+    // worst of the app's motion for vestibular disorders.
+    if (!this.flying && !reducedMotion() && now - this.lastInput > tokens.idleAfterSeconds * 1000)
+      this.drift(dt)
   }
 
   private updateExaggeration(dt: number): void {

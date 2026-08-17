@@ -1,43 +1,52 @@
-import { unknownColor, unusual } from '../tokens'
-import { RAMP_MAX, RAMP_MIN, rampCss, rampGradientCss } from '../layers/ramp'
+import { rampGradientCss } from '../layers/ramp'
+import { Swatch } from './Swatch'
 
-// Neutral wording on purpose: most gauges are ranked against their own record
-// for the date, where these ticks are the 10th, 50th and 90th percentile — not
-// MNW/MW/MHW. Only the handful still on year-round marks would fit those names.
-const MARKS: { state: number; label: string }[] = [
-  { state: -1, label: 'Rekord' },
-  { state: unusual.low, label: 'selten' },
-  { state: 0, label: 'normal' },
-  { state: unusual.high, label: 'selten' },
-  { state: 1, label: 'Rekord' },
+// The scale's own anchors are percentiles of this gauge's record for this date:
+// p10 sits at -0.5 and p90 at +0.5 (see anomaly.py). So the honest label for
+// "selten" is the quantity itself — one year in ten — and the honest width for
+// "normal" is eight tenths of the bar. Drawing the bands equal-width taught the
+// opposite.
+//
+// "Niedrigwasser" and "Hochwasser" are deliberately not used: in German those
+// name official events with legal warning thresholds, and this app has neither
+// the data nor the standing to assert one.
+// The record bands are a twentieth of the bar each — too narrow to hold a word
+// without truncating it, so they are left to the sentence underneath.
+const BANDS: { width: number; label: string }[] = [
+  { width: 5, label: '' },
+  { width: 10, label: 'selten' },
+  { width: 70, label: 'üblich' },
+  { width: 10, label: 'selten' },
+  { width: 5, label: '' },
 ]
 
 /** What the colours mean. Without this the map is decoration. */
 export function Legend() {
-  const pos = (state: number) => `${((state - RAMP_MIN) / (RAMP_MAX - RAMP_MIN)) * 100}%`
   return (
     <figure className="legend-scale">
-      <figcaption>Wie ungewöhnlich für diesen Pegel</figcaption>
-      <div className="bar" style={{ background: rampGradientCss() }}>
-        {MARKS.map((m) => (
-          <span key={m.state} className="mark" style={{ left: pos(m.state) }} />
-        ))}
-      </div>
-      <div className="ticks mono">
-        {MARKS.map((m) => (
-          <span key={m.state} style={{ left: pos(m.state) }}>
-            {m.label}
+      <figcaption>Verglichen mit demselben Datum seit 2000</figcaption>
+      <div className="bar" style={{ background: rampGradientCss() }} />
+      <div className="bands">
+        {BANDS.map((b, i) => (
+          <span key={i} style={{ flexGrow: b.width }}>
+            {b.label}
           </span>
         ))}
       </div>
       <div className="ends">
-        <span>Niedrigwasser</span>
-        <span>Hochwasser</span>
+        <span>weniger Wasser als sonst</span>
+        <span>mehr als sonst</span>
       </div>
+      {/* The widths are the frequencies; this says what they mean. */}
+      <p className="reading">
+        <b>üblich</b> ist, was an diesem Datum in 8 von 10 Jahren gemessen wurde. Auf <b>selten</b> entfällt je ein
+        Zehntel der Jahre. Ganz außen: so tief oder so hoch wie nie zuvor an diesem Tag.
+      </p>
       <p className="note">
-        <i style={{ background: rampCss(null) }} /> ohne Kennwerte, keine Einordnung möglich
-        <br />
-        <span style={{ color: unknownColor }}>weiche Kanten = Prognose</span>
+        <span>
+          <Swatch state={null} size={10} /> ohne Langzeit-Archiv, nicht einzuordnen
+        </span>
+        <span>weiche Kanten = Prognose, nicht gemessen</span>
       </p>
     </figure>
   )

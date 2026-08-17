@@ -39,6 +39,29 @@ const SHORT: { below: number; text: string }[] = [
   { below: 1.0, text: 'extrem hoch' },
 ]
 
+/**
+ * The comparison the verdict actually rests on, short enough for a list row.
+ *
+ * The list used to print `MNW 123` for every gauge, taken from its published
+ * marks — but 432 of 443 gauges are ranked against their own record for the
+ * date, where the anchors are the 10th/25th/75th/90th percentile and not the
+ * marks at all. On 15 August 2003 that made 68% of rows show a mark the
+ * reading was *above* while the dot said "low". Both wordings below are
+ * derived from `state` itself, so the row can no longer disagree with its
+ * own colour.
+ */
+export function yardstick(state: number | null, basis: Basis): string | null {
+  if (state === null || Number.isNaN(state)) return null
+  const seasonal = basis === 'seasonal'
+  if (state <= -1) return seasonal ? 'tiefer als je an diesem Tag' : 'unter dem Niedrigstwert'
+  if (state <= -0.5) return seasonal ? 'tiefer als 9 von 10 Jahren' : 'unter dem mittleren Niedrigwasser'
+  if (state <= -0.25) return seasonal ? 'tiefer als 3 von 4 Jahren' : 'unter dem Mittelwasser'
+  if (state < 0.25) return seasonal ? 'wie in den meisten Jahren' : 'um das Mittelwasser'
+  if (state < 0.5) return seasonal ? 'höher als 3 von 4 Jahren' : 'über dem Mittelwasser'
+  if (state < 1) return seasonal ? 'höher als 9 von 10 Jahren' : 'über dem mittleren Hochwasser'
+  return seasonal ? 'höher als je an diesem Tag' : 'über dem Höchstwert'
+}
+
 /** Two or three words for a list row, where the full sentence will not fit. */
 export function classifyShort(state: number | null): string | null {
   if (state === null || Number.isNaN(state)) return null

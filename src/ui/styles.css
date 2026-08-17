@@ -12,10 +12,14 @@
 
 :root {
   --ink: var(--paper);
-  --surface: color-mix(in srgb, var(--abyss) 88%, transparent);
-  --ink-soft: color-mix(in srgb, var(--ink) 62%, var(--abyss));
-  --ink-faint: color-mix(in srgb, var(--ink) 38%, var(--abyss));
-  --rule: color-mix(in srgb, var(--ink) 16%, transparent);
+  /* 94%, not 88%: the panel floats over whatever the map is drawing, and a
+     thinner ground moved every contrast ratio around with it. */
+  --surface: color-mix(in srgb, var(--abyss) 94%, transparent);
+  --ink-soft: color-mix(in srgb, var(--ink) 72%, var(--abyss));
+  /* Was 38%, which computes to 2.9:1 — while carrying the legal disclaimer
+     and the labels that decode the entire colour scale. */
+  --ink-faint: color-mix(in srgb, var(--ink) 56%, var(--abyss));
+  --rule: color-mix(in srgb, var(--ink) 28%, transparent);
   --label-shadow: 0 14px 34px -14px rgb(0 0 0 / 0.9);
   /* Uppercase monospace labels; used often enough to name once. */
   --label-tracking: 0.14em;
@@ -34,8 +38,9 @@ body,
   background: var(--abyss);
   color: var(--paper);
   font-family: var(--font-body);
-  font-size: 13.5px;
-  line-height: 1.4;
+  /* rem, so the browser's own text-size setting is honoured. */
+  font-size: 1rem;
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -121,6 +126,55 @@ button {
 
 
 
+/* Focus, hidden text, motion -------------------------------------- */
+
+/* Every control here resets its own appearance, and `all: unset` took the
+   outline with it — so the keyboard UI was invisible. One rule, everywhere,
+   in the token that is 14:1 against the surface. */
+:where(button, a, summary, input, [tabindex]):focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 1px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Sixty list rows sit between the sidebar and every other control. */
+.skip {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+  padding: 8px 12px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--rule);
+  transform: translateY(-200%);
+}
+
+.skip:focus {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
 /* Time bar -------------------------------------------------------- */
 
 .timebar {
@@ -144,11 +198,17 @@ button {
 }
 
 .timebar .modes button {
-  all: unset;
+  min-height: 24px;
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
   cursor: pointer;
   padding: 4px 9px;
   font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-size: 11px;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
   color: var(--ink-soft);
@@ -171,7 +231,12 @@ button {
 }
 
 .timebar .play {
-  all: unset;
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
   cursor: pointer;
   width: 30px;
   height: 30px;
@@ -202,7 +267,7 @@ button {
 
 .timebar .readout .kind {
   font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-size: 11px;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
   color: var(--ink-soft);
@@ -276,7 +341,7 @@ button {
   transform: translateX(-50%);
   font-style: normal;
   font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-size: 11px;
   color: var(--ink-soft);
   white-space: nowrap;
 }
@@ -294,7 +359,7 @@ button {
   position: absolute;
   top: -8px;
   left: 4px;
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink);
@@ -361,7 +426,7 @@ button {
 
 .panel .provenance {
   margin: 2px 0 0;
-  font-size: 10.5px;
+  font-size: 11.5px;
   color: var(--ink-faint);
 }
 
@@ -439,7 +504,12 @@ button {
 }
 
 .panel .load-history {
-  all: unset;
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
   cursor: pointer;
   display: block;
   width: 100%;
@@ -448,7 +518,7 @@ button {
   padding: 6px 0;
   text-align: center;
   font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-size: 11px;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
   color: var(--ink-soft);
@@ -470,7 +540,7 @@ button {
 }
 
 .chart .axis {
-  font-size: 8.5px;
+  font-size: 10px;
   fill: var(--ink-soft);
 }
 
@@ -595,67 +665,11 @@ button {
   color: inherit;
 }
 
-.credits a {
+.notice a {
   color: inherit;
 }
 
-/* Phones ---------------------------------------------------------- */
 
-@media (max-width: 640px) {
-  .masthead h1 {
-    font-size: 17px;
-  }
-
-  /* The track needs the full width, so the readout moves above it. */
-  .timebar {
-    left: 12px;
-    right: 12px;
-    bottom: 12px;
-    width: auto;
-    transform: none;
-    grid-template-columns: auto auto 1fr;
-    grid-template-areas: 'modes play readout' 'track track track';
-    gap: 4px 10px;
-    padding: 6px 10px 4px;
-  }
-
-  .timebar .modes {
-    grid-area: modes;
-  }
-
-  .timebar .play {
-    grid-area: play;
-  }
-
-  .timebar .readout {
-    grid-area: readout;
-    align-items: flex-start;
-    min-width: 0;
-  }
-
-  .timebar .track {
-    grid-area: track;
-  }
-
-  .panel {
-    top: auto;
-    bottom: 96px;
-    left: 12px;
-    right: 12px;
-    width: auto;
-  }
-
-  .credits,
-  .status,
-  .hovername {
-    left: 12px;
-  }
-
-  .status,
-  .hovername {
-    bottom: 150px;
-  }
-}
 
 /* Masthead -------------------------------------------------------- */
 
@@ -695,7 +709,7 @@ button {
 }
 
 .statusline .of {
-  font-size: 10.5px;
+  font-size: 11.5px;
   color: var(--ink-faint);
   flex-basis: 100%;
 }
@@ -705,7 +719,13 @@ button {
 }
 
 .statusline button {
-  all: unset;
+  min-height: 24px;
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -759,7 +779,12 @@ button {
 }
 
 .layer-control button {
-  all: unset;
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -843,7 +868,12 @@ button {
 }
 
 .anomalies .tabs button {
-  all: unset;
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
   cursor: pointer;
   flex: 1;
   text-align: center;
@@ -888,10 +918,15 @@ button {
 }
 
 .anomalies .row button {
-  all: unset;
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
   cursor: pointer;
   display: grid;
-  grid-template-columns: 10px 1fr auto;
+  grid-template-columns: 12px 1fr auto;
   align-items: center;
   gap: 10px;
   width: 100%;
@@ -924,37 +959,96 @@ button {
 
 .anomalies .who b {
   font-weight: 500;
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.anomalies .who em,
-.anomalies .what em {
+.anomalies .who em {
   font-style: normal;
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: 11.5px;
+  line-height: 1.35;
   color: var(--ink-soft);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+/* The gauge's water, in the label voice the rest of the sheet uses. */
+.anomalies .who em .water {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .anomalies .what {
-  max-width: 118px;
+  max-width: none;
+  align-self: start;
+  padding-top: 1px;
 }
 
 .anomalies .what b {
-  font-family: var(--font-display);
-  font-variant-numeric: tabular-nums;
-  font-weight: 400;
-  font-size: 19px;
-  line-height: 1.05;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.2;
+  white-space: nowrap;
   color: var(--ink);
+}
+
+.anomalies .what b span {
+  font-size: 10px;
+  color: var(--ink-soft);
+}
+
+/* "Worst first" only means something among waters that behave alike. */
+.anomalies .waters {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.anomalies .waters button {
+  appearance: none;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  flex: 1;
+  padding: 5px 4px;
+  min-height: 24px;
+  font: inherit;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  box-shadow: inset 0 -2px 0 var(--rule);
+}
+
+.anomalies .waters button b {
+  font-weight: 500;
+  margin-left: 3px;
+  color: var(--ink);
+}
+
+.anomalies .waters button[aria-pressed='true'] {
+  color: var(--ink);
+  box-shadow: inset 0 -2px 0 var(--ink);
+}
+
+.anomalies .waters button:disabled {
+  cursor: default;
+  color: var(--ink-faint);
+}
+
+.anomalies .water-note {
+  margin: 0;
+  padding: 8px 15px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--rule);
+}
+
+.swatch {
+  flex: none;
+  overflow: visible;
 }
 
 /* A word, not a reading: it needs less weight than a figure does. */
@@ -987,7 +1081,12 @@ button {
 }
 
 .panel .back {
-  all: unset;
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
   cursor: pointer;
   font-size: 11.5px;
   color: var(--ink-soft);
@@ -1036,7 +1135,7 @@ button {
 
 .panel .provenance {
   margin: 4px 0 0;
-  font-size: 10.5px;
+  font-size: 11.5px;
   color: var(--ink-faint);
 }
 
@@ -1069,7 +1168,7 @@ button {
   justify-content: space-between;
   margin-top: 4px;
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
   color: var(--ink-faint);
@@ -1086,7 +1185,12 @@ button {
 }
 
 .river-gauges button {
-  all: unset;
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
   cursor: pointer;
   display: grid;
   grid-template-columns: 9px 1fr auto;
@@ -1129,121 +1233,336 @@ button {
   position: absolute;
   left: 26px;
   bottom: 100px;
-  width: 268px;
+  width: 340px;
   margin: 0;
-  padding: 11px 13px 10px;
+  padding: 12px 14px 11px;
 }
 
 .legend-scale figcaption {
   font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-size: 10px;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
   color: var(--ink-soft);
-  margin-bottom: 10px;
+  margin-bottom: 9px;
 }
 
 .legend-scale .bar {
-  position: relative;
-  height: 10px;
-  margin: 0 22px;
-  border: 1px solid var(--ink);
+  height: 11px;
 }
 
-.legend-scale .bar .mark {
-  position: absolute;
-  top: -2px;
-  bottom: -2px;
-  width: 1px;
-  background: var(--ink);
-  opacity: 0.5;
+/* The bands are as wide as the thing they describe is common, so the picture
+   teaches the statistics before a word is read. */
+.legend-scale .bands {
+  display: flex;
+  margin-top: 5px;
 }
 
-.legend-scale .ticks {
-  position: relative;
-  height: 13px;
-  margin: 3px 22px 0;
+.legend-scale .bands span {
+  flex-basis: 0;
+  min-width: 0;
+  text-align: center;
+  line-height: 1.2;
+  padding: 0 1px;
+  border-left: 1px solid var(--rule);
 }
 
-.legend-scale .ticks span {
-  position: absolute;
-  transform: translateX(-50%);
-  font-size: 9px;
+.legend-scale .bands span:first-child {
+  border-left: none;
+}
+
+.legend-scale .bands span {
+  font-size: 10.5px;
   color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.legend-scale .bands span:nth-child(3) {
+  color: var(--ink);
+}
+
+.legend-scale .reading {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+.legend-scale .reading b {
+  font-weight: 500;
+  color: var(--ink);
 }
 
 .legend-scale .ends {
   display: flex;
   justify-content: space-between;
-  margin: 0 2px;
-  font-size: 10px;
-  color: var(--ink-faint);
-}
-
-.legend-scale .note {
-  margin: 8px 0 0;
-  padding-top: 8px;
-  border-top: 1px solid var(--rule);
-  font-size: 10px;
-  line-height: 1.55;
+  margin-top: 8px;
+  font-size: 11px;
   color: var(--ink-soft);
 }
 
-.legend-scale .note i {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 5px;
-  vertical-align: middle;
+.legend-scale .note {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 9px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid var(--rule);
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--ink-soft);
 }
 
-/* Phones ---------------------------------------------------------- */
+.legend-scale .note span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 
-@media (max-width: 640px) {
-  .masthead {
-    top: 12px;
-    left: 12px;
-    right: 12px;
-    max-width: none;
+/* Search ---------------------------------------------------------- */
+
+.search {
+  position: relative;
+  margin-top: 10px;
+}
+
+.search input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  min-height: 32px;
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+  border: 0;
+  box-shadow: inset 0 0 0 1px var(--rule);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+
+.search input::placeholder {
+  color: var(--ink-faint);
+}
+
+.search .hits {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 5;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--surface);
+  box-shadow:
+    inset 0 0 0 1px var(--rule),
+    var(--label-shadow);
+}
+
+.search .hits button {
+  appearance: none;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  min-height: 32px;
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+}
+
+.search .hits button.active {
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+.search .hits .kind {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.search .hits b {
+  font-weight: 500;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search .hits em {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.search .hits .swatch {
+  justify-self: center;
+}
+
+/* Sources and the warning notice ----------------------------------- */
+
+.notice {
+  position: absolute;
+  left: 26px;
+  bottom: 8px;
+  /* The time bar is centred and reaches to roughly 310px on a wide screen;
+     staying inside that keeps the notice off it. */
+  max-width: 270px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  pointer-events: auto;
+}
+
+.notice .warning {
+  margin: 0 0 3px;
+  color: var(--ink);
+}
+
+.notice .warning strong {
+  font-weight: 600;
+}
+
+.notice a {
+  color: inherit;
+}
+
+.notice > button {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  min-height: 24px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  color: var(--ink-soft);
+  text-decoration: underline;
+}
+
+.notice > button:hover {
+  color: var(--ink);
+}
+
+.notice .sources {
+  margin-top: 6px;
+  padding: 10px 12px;
+  max-height: 40vh;
+  overflow-y: auto;
+  background: var(--surface);
+  box-shadow:
+    inset 0 0 0 1px var(--rule),
+    var(--label-shadow);
+}
+
+.notice .sources p {
+  margin: 0 0 8px;
+}
+
+.notice .sources p:last-child {
+  margin-bottom: 0;
+}
+
+.notice .sources b {
+  display: block;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.notice .sources .caveat {
+  padding-top: 8px;
+  border-top: 1px solid var(--rule);
+}
+
+/* Narrow and zoomed ----------------------------------------------- */
+
+/* Three panels were pinned to `bottom: 96px` and drew on top of one another,
+   and the legend — the only key to the colours — was deleted outright. Below
+   this the floating-panel model is abandoned: map on top, one scrolling
+   column under it. The height query catches desktop at 200-400% zoom, where
+   the old layout collapsed the same way. */
+@media (max-width: 860px), (max-height: 620px) {
+  html,
+  body,
+  #app {
+    overflow: auto;
   }
 
-  .masthead h1 {
-    font-size: 17px;
+  .hud {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
   }
 
-  .statusline .of,
-  .legend-scale {
-    display: none;
+  .scene {
+    position: sticky;
+    top: 0;
+    inset: auto;
+    height: 42vh;
+    min-height: 220px;
   }
 
-  .controls {
-    top: auto;
-    right: 12px;
-    bottom: 96px;
+  .ui {
+    position: static;
   }
 
-  .sidebar {
-    top: auto;
-    left: 12px;
-    right: 12px;
-    bottom: 96px;
+  .masthead,
+  .sidebar,
+  .legend-scale,
+  .controls,
+  .timebar,
+  .notice {
+    position: static;
+    transform: none;
     width: auto;
-    margin-top: 0;
-    max-height: 52%;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    inset: auto;
+  }
+
+  .masthead {
+    order: 1;
+    padding: 12px 14px;
   }
 
   .timebar {
-    left: 12px;
-    right: 12px;
-    bottom: 12px;
-    width: auto;
-    transform: none;
+    order: 2;
     grid-template-columns: auto auto 1fr;
     grid-template-areas: 'modes play readout' 'track track track';
-    gap: 4px 10px;
-    padding: 6px 10px 4px;
+    gap: 6px 10px;
+    padding: 10px 14px;
+  }
+
+  .legend-scale {
+    order: 3;
+    padding: 12px 14px;
+  }
+
+  .sidebar {
+    order: 4;
+    flex: 1;
+  }
+
+  .notice {
+    order: 5;
+    padding: 12px 14px;
+  }
+
+  .controls {
+    order: 6;
+    display: flex;
+    justify-content: flex-start;
+    padding: 0 14px 14px;
   }
 
   .timebar .modes {
@@ -1264,18 +1583,16 @@ button {
     grid-area: track;
   }
 
-  .panel {
+  .hovername,
+  .status {
+    position: fixed;
+    left: 14px;
+    bottom: 14px;
+    z-index: 6;
+  }
+
+  .panel,
+  .anomalies {
     max-height: none;
-  }
-
-  .credits,
-  .status,
-  .hovername {
-    left: 12px;
-  }
-
-  .status,
-  .hovername {
-    bottom: 150px;
   }
 }

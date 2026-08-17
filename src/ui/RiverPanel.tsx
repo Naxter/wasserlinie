@@ -6,6 +6,7 @@ import { useApp } from '../store'
 import { classifyShort } from './classify'
 import { formatCm } from './format'
 import { useQuantizedTime } from './useQuantizedTime'
+import { Swatch } from './Swatch'
 
 /** Segments in the strip that shows the state running down the river. */
 const PROFILE = 40
@@ -96,7 +97,7 @@ export function RiverPanel() {
                   onPointerEnter={() => hover(g.uuid)}
                   onPointerLeave={() => hover(null)}
                 >
-                  <i style={{ background: rampCss(Number.isNaN(state) ? null : state) }} aria-hidden="true" />
+                  <Swatch state={Number.isNaN(state) ? null : state} size={10} />
                   <b>{titleCase(g.name)}</b>
                   <em>
                     {g.sample && Number.isFinite(g.sample.cm)

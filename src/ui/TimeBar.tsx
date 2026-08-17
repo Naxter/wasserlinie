@@ -45,7 +45,7 @@ export function TimeBar() {
   const lead = (simTime - range.now) / 3_600_000
 
   return (
-    <div className="timebar">
+    <div className="timebar" id="zeitleiste">
       <div className="modes" role="group" aria-label="Zeitraum">
         <button aria-pressed={mode === 'live'} onClick={() => setMode('live')}>
           Jetzt

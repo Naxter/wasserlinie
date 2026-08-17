@@ -2,9 +2,9 @@ import { useCallback, useMemo } from 'react'
 import { useServices } from '../services'
 import { useApp } from '../store'
 import { Chart } from './Chart'
-import { rampCss } from '../layers/ramp'
 import { classify, changeIn24h } from './classify'
 import { formatCm, formatDate, formatLead, formatTime } from './format'
+import { Swatch } from './Swatch'
 
 const REF_LABEL: Record<string, [string, string]> = {
   mean: ['MNW', 'MHW'],
@@ -91,7 +91,7 @@ export function StationPanel() {
         <p className="verdict">
           {verdict ? (
             <>
-              <i style={{ background: rampCss(sample.state) }} />
+              <Swatch state={sample.state} size={12} />
               {verdict}
             </>
           ) : (
