@@ -36,6 +36,13 @@ CALIBRATION_HOURS = 180
 BAND_COVERAGE = 0.8
 MAX_WIDENING = 6.0
 
+# Readings arrive with a lag, so the newest hour in the file is usually still
+# filling up — a run started just after the hour finds a couple of hundred
+# gauges in it instead of all of them. Every station is anchored on that one
+# index, so the rest would silently get no forecast at all. Step back to the
+# last hour that is actually populated.
+MIN_ISSUE_SHARE = 0.9
+
 
 def standardise(cm: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Per-station z-scores plus the mean and std needed to map predictions back to cm."""
@@ -171,6 +178,16 @@ def predict(
     return df
 
 
+def issue_index(z: np.ndarray) -> int:
+    """The most recent hour with enough gauges reporting to anchor a run on."""
+    have = np.isfinite(z).sum(axis=0)
+    usual = np.median(have[-24:])
+    for t in range(len(have) - 1, 0, -1):
+        if have[t] >= MIN_ISSUE_SHARE * usual:
+            return t
+    return len(have) - 1
+
+
 def latest_run(paths: Paths) -> dict[str, Any] | None:
     if not paths.manifest.exists():
         return None
@@ -202,6 +219,11 @@ def run(paths: Paths) -> None:
     tidal = np.array([s.get("ref") == "tidal" for s in stations])
     z[tidal] = np.nan
     log.info("%d tidal gauges excluded", int(tidal.sum()))
+
+    t = issue_index(z)
+    if t < len(index) - 1:
+        log.info("stepping back %d h: the newest hours are still filling up", len(index) - 1 - t)
+        z, index, hours = z[:, : t + 1], index[: t + 1], hours[: t + 1]
 
     split = max(LOOKBACK + FORECAST_HOURS, len(index) - CALIBRATION_HOURS)
     x, y = training_set(z[:, :split], hours[:split])

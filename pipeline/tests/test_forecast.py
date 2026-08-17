@@ -1,7 +1,27 @@
 import numpy as np
 import pandas as pd
 
-from wasserlinie.forecast import LOOKBACK, calibrate, features_at, fit, predict, standardise, training_set
+from wasserlinie.forecast import (
+    LOOKBACK,
+    calibrate,
+    features_at,
+    fit,
+    issue_index,
+    predict,
+    standardise,
+    training_set,
+)
+
+
+def test_the_run_is_anchored_on_a_populated_hour():
+    # 40 gauges over 30 hours, but the newest two hours have only just started
+    # to fill: 5 gauges and 12 of 40.
+    z = np.zeros((40, 30))
+    z[5:, -1] = np.nan
+    z[12:, -2] = np.nan
+    assert issue_index(z) == 27
+    # With nothing missing the newest hour is the right one.
+    assert issue_index(np.zeros((40, 30))) == 29
 
 
 def _synthetic(stations: int = 3, hours: int = 400) -> np.ndarray:
