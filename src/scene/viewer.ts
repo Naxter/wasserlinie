@@ -39,7 +39,12 @@ export function createViewer({ container, credits, outline }: SceneOptions): Vie
       webgl: { alpha: false, antialias: false, powerPreference: 'high-performance' },
     },
   })
-  viewer.resolutionScale = Math.min(window.devicePixelRatio || 1, render.maxPixelRatio)
+  // Cesium renders at `devicePixelRatio * resolutionScale` whenever
+  // useBrowserRecommendedResolution is false, so handing it the ratio a second
+  // time squares it: 4x linear and 16x the pixels on a 2x screen, before MSAA.
+  // Divide it back out so the cap is the cap.
+  const dpr = window.devicePixelRatio || 1
+  viewer.resolutionScale = Math.min(dpr, render.maxPixelRatio) / dpr
 
   const scene = viewer.scene
   const globe = scene.globe
