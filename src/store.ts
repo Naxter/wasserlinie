@@ -1,6 +1,6 @@
 import { createStore } from 'zustand/vanilla'
 import { useStore } from 'zustand'
-import type { ForecastRun, Station } from './data/types'
+import type { ForecastRun, River, Station } from './data/types'
 
 export interface TimeRange {
   start: number
@@ -31,7 +31,11 @@ export interface AppState {
   run: ForecastRun | null
   filter: Filter
   selected: string | null
+  /** the picked river part, when a river was clicked instead of a gauge */
+  selectedRiver: number | null
+  rivers: Map<number, River>
   hovered: string | null
+  hoveredRiver: number | null
   status: string | null
   error: string | null
 
@@ -45,7 +49,10 @@ export interface AppState {
   setRun: (run: ForecastRun | null) => void
   setFilter: (filter: Filter) => void
   select: (uuid: string | null) => void
+  selectRiver: (id: number | null) => void
+  setRivers: (rivers: Map<number, River>) => void
   hover: (uuid: string | null) => void
+  hoverRiver: (id: number | null) => void
   setStatus: (text: string | null) => void
   fail: (message: string) => void
 }
@@ -63,7 +70,10 @@ export const store = createStore<AppState>((set, get) => ({
   run: null,
   filter: 'all',
   selected: null,
+  selectedRiver: null,
+  rivers: new Map(),
   hovered: null,
+  hoveredRiver: null,
   status: null,
   error: null,
 
@@ -85,8 +95,12 @@ export const store = createStore<AppState>((set, get) => ({
   setStations: (stations) => set({ stations }),
   setRun: (run) => set({ run }),
   setFilter: (filter) => set((s) => ({ filter: s.filter === filter ? 'all' : filter })),
-  select: (uuid) => set({ selected: uuid }),
-  hover: (uuid) => set((s) => (s.hovered === uuid ? s : { hovered: uuid })),
+  // The sidebar shows one thing at a time, so picking either clears the other.
+  select: (uuid) => set({ selected: uuid, selectedRiver: null }),
+  selectRiver: (id) => set({ selectedRiver: id, selected: null }),
+  setRivers: (rivers) => set({ rivers }),
+  hover: (uuid) => set((s) => (s.hovered === uuid ? s : { hovered: uuid, hoveredRiver: null })),
+  hoverRiver: (id) => set((s) => (s.hoveredRiver === id ? s : { hoveredRiver: id, hovered: null })),
   setStatus: (status) => set({ status }),
   fail: (error) => set({ error, status: null }),
 }))

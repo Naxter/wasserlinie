@@ -2,6 +2,7 @@ import { useApp } from '../store'
 import { AnomalyList } from './AnomalyList'
 import { LayerControl } from './LayerControl'
 import { Legend } from './Legend'
+import { RiverPanel } from './RiverPanel'
 import { StationPanel } from './StationPanel'
 import { StatusLine } from './StatusLine'
 import { TimeBar } from './TimeBar'
@@ -11,9 +12,13 @@ export function App() {
   const error = useApp((s) => s.error)
   const stations = useApp((s) => s.stations)
   const selected = useApp((s) => s.selected)
+  const selectedRiver = useApp((s) => s.selectedRiver)
   const hovered = useApp((s) => s.hovered)
+  const hoveredRiver = useApp((s) => s.hoveredRiver)
+  const rivers = useApp((s) => s.rivers)
   const ready = stations.length > 0
   const hoveredStation = hovered ? stations.find((s) => s.uuid === hovered) : null
+  const underCursor = hoveredStation?.name ?? (hoveredRiver !== null ? rivers.get(hoveredRiver)?.name : null)
 
   return (
     <div className="hud">
@@ -23,7 +28,11 @@ export function App() {
       </header>
 
       {/* One column on the right, so the map never gains a second floating box. */}
-      {ready && <aside className="sidebar">{selected ? <StationPanel /> : <AnomalyList />}</aside>}
+      {ready && (
+        <aside className="sidebar">
+          {selected ? <StationPanel /> : selectedRiver !== null ? <RiverPanel /> : <AnomalyList />}
+        </aside>
+      )}
 
       <div className="controls">
         <LayerControl />
@@ -31,7 +40,7 @@ export function App() {
 
       {ready && <Legend />}
 
-      {hoveredStation && <div className="hovername">{hoveredStation.name.toLowerCase()}</div>}
+      {underCursor && <div className="hovername">{underCursor.toLowerCase()}</div>}
 
       <TimeBar />
 

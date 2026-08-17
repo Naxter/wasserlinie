@@ -974,6 +974,80 @@ button {
   color: var(--ink-faint);
 }
 
+/* River panel ----------------------------------------------------- */
+
+/* The state running down the river, upstream on the left: the same
+   interpolation the shader paints on the map, laid out flat. */
+.panel .profile {
+  display: flex;
+  height: 22px;
+  margin-top: 12px;
+  gap: 0;
+}
+
+.panel .profile i {
+  flex: 1;
+}
+
+.panel .profile-ends {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.river-gauges {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.river-gauges li + li {
+  border-top: 1px solid var(--rule);
+}
+
+.river-gauges button {
+  all: unset;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 9px 1fr auto;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 2px;
+}
+
+.river-gauges button:hover {
+  background: color-mix(in srgb, var(--ink) 9%, transparent);
+}
+
+.river-gauges i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.river-gauges b {
+  font-weight: 500;
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.river-gauges em {
+  font-style: normal;
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+
 /* Legend ---------------------------------------------------------- */
 
 .legend-scale {

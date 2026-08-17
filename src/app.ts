@@ -6,6 +6,7 @@ import { GaugeLayer } from './layers/gauges'
 import { LayerHost } from './layers/plugin'
 import { RiverLayer } from './layers/rivers'
 import { CameraDirector } from './scene/camera'
+import { bindPicking } from './scene/picking'
 import { bindClock } from './scene/time'
 import { createViewer } from './scene/viewer'
 import { setServices } from './services'
@@ -50,7 +51,8 @@ export async function startApp(sceneEl: HTMLElement, creditsEl: HTMLElement): Pr
 
   const host = new LayerHost({ viewer, timeline })
   host.add(new RiverLayer())
-  host.add(new GaugeLayer((uuid) => store.getState().select(uuid)))
+  host.add(new GaugeLayer())
+  const unbindPicking = bindPicking(viewer.scene)
 
   setServices({ levels, timeline, director })
 
@@ -96,6 +98,7 @@ export async function startApp(sceneEl: HTMLElement, creditsEl: HTMLElement): Pr
   return {
     dispose() {
       unsubscribe()
+      unbindPicking()
       unbindClock()
       host.dispose()
       viewer.destroy()

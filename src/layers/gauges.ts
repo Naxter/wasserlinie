@@ -1,14 +1,4 @@
-import {
-  Billboard,
-  BillboardCollection,
-  Cartesian2,
-  Cartesian3,
-  Color,
-  NearFarScalar,
-  ScreenSpaceEventHandler,
-  ScreenSpaceEventType,
-  type Scene,
-} from 'cesium'
+import { Billboard, BillboardCollection, Cartesian3, Color, NearFarScalar, type Scene } from 'cesium'
 import type { Station } from '../data/types'
 import { store, type Filter } from '../store'
 import { color, gauge, unknownColor, unusual } from '../tokens'
@@ -102,11 +92,8 @@ export class GaugeLayer implements VisualLayer {
   private billboards: Billboard[] = []
   private sprites: ('crisp' | 'soft')[] = []
   private stations: Station[] = []
-  private handler: ScreenSpaceEventHandler | null = null
   private readonly crisp = sprite(false)
   private readonly soft = sprite(true)
-
-  constructor(private readonly onSelect: (uuid: string) => void) {}
 
   load(ctx: LayerContext): Promise<void> {
     this.scene = ctx.viewer.scene
@@ -129,32 +116,7 @@ export class GaugeLayer implements VisualLayer {
       }),
     )
     this.collection = this.scene.primitives.add(collection) as BillboardCollection
-    this.bindPointer(ctx)
     return Promise.resolve()
-  }
-
-  private bindPointer(ctx: LayerContext): void {
-    const scene = ctx.viewer.scene
-    const handler = new ScreenSpaceEventHandler(scene.canvas)
-    const pickStation = (position: Cartesian2): string | null => {
-      const picked = scene.pick(position) as { id?: unknown; primitive?: unknown } | undefined
-      if (!picked || picked.primitive !== this.collection) return null
-      return typeof picked.id === 'string' ? picked.id : null
-    }
-    handler.setInputAction((e: ScreenSpaceEventHandler.PositionedEvent) => {
-      const uuid = pickStation(e.position)
-      if (uuid) this.onSelect(uuid)
-    }, ScreenSpaceEventType.LEFT_CLICK)
-    let last = 0
-    handler.setInputAction((e: ScreenSpaceEventHandler.MotionEvent) => {
-      const now = performance.now()
-      if (now - last < 60) return
-      last = now
-      const uuid = pickStation(e.endPosition)
-      store.getState().hover(uuid)
-      scene.canvas.style.cursor = uuid ? 'pointer' : ''
-    }, ScreenSpaceEventType.MOUSE_MOVE)
-    this.handler = handler
   }
 
   /** `setImage` every frame re-does an atlas lookup per gauge; only switch on change. */
@@ -216,7 +178,6 @@ export class GaugeLayer implements VisualLayer {
   }
 
   dispose(): void {
-    this.handler?.destroy()
     if (this.scene && this.collection) this.scene.primitives.remove(this.collection)
     this.collection = null
     this.billboards = []

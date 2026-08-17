@@ -10,6 +10,7 @@ import {
 import { loadField, loadRiverDetail, loadRivers } from '../data/assets'
 import type { TimeSource } from '../data/timeline'
 import type { Field, River } from '../data/types'
+import { store } from '../store'
 import { createRiverMaterial, riverUniforms, stillField, type FieldEncoding } from './riverMaterial'
 import type { FrameInfo, LayerContext, VisualLayer } from './plugin'
 
@@ -173,12 +174,21 @@ export class RiverLayer implements VisualLayer {
     }
     this.flushBackground()
 
+    // Every part is clickable, so the panel needs to find them by the id the
+    // geometry carries.
+    const index = new Map(rivers.rivers.map((r) => [r.id, r]))
+    store.getState().setRivers(index)
+
     // The fine network is three times the size of the gauged rivers and adds
     // nothing to the first impression, so it arrives on its own.
     const detail = await loadRiverDetail(signal)
     signal.throwIfAborted()
-    for (const river of detail.rivers) this.collectBackground(river)
+    for (const river of detail.rivers) {
+      this.collectBackground(river)
+      index.set(river.id, river)
+    }
     this.flushBackground()
+    store.getState().setRivers(new Map(index))
   }
 
   private collectBackground(river: River): void {
