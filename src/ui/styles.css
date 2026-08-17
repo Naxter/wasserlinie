@@ -78,6 +78,7 @@ button {
 .paper,
 .masthead,
 .layer-control,
+.overview,
 .sidebar,
 .timebar,
 .legend-scale,
@@ -775,6 +776,25 @@ button {
   right: 26px;
   display: flex;
   gap: 8px;
+}
+
+.overview {
+  appearance: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+/* The surface is on the button itself here, so hover mixes into it rather than
+   replacing it the way the layer toggles can. */
+.overview:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 8%, var(--surface));
 }
 
 .layer-control {

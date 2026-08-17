@@ -3,6 +3,7 @@ import { AnomalyList } from './AnomalyList'
 import { Credits } from './Credits'
 import { LayerControl } from './LayerControl'
 import { Legend } from './Legend'
+import { Overview } from './Overview'
 import { RiverPanel } from './RiverPanel'
 import { Search } from './Search'
 import { StationPanel } from './StationPanel'
@@ -54,6 +55,7 @@ export function App() {
       )}
 
       <div className="controls">
+        {ready && <Overview />}
         <LayerControl />
       </div>
 
