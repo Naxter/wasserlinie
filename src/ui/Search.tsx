@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { River } from '../data/types'
 import { useServices } from '../services'
 import { useApp } from '../store'
 import { Swatch } from './Swatch'
@@ -23,6 +24,30 @@ function fold(s: string): string {
 
 function titleCase(s: string): string {
   return s.toLowerCase().replace(/(^|[\s\-(/.])([a-zäöüß])/g, (m) => m.toUpperCase())
+}
+
+/**
+ * One segment per river name: the one carrying the most gauges.
+ *
+ * The network arrives cut into segments, so "Rhein" is dozens of entries. The
+ * old `new Map(rivers.map(r => [r.name, r]))` kept whichever came last, which
+ * was routinely a stub — the Rhine offered itself as "0 Pegel" and opened five
+ * empty kilometres. Length breaks ties so an ungauged river still yields its
+ * main course rather than a fragment.
+ */
+export function mainSegments(rivers: Iterable<River>): River[] {
+  const best = new Map<string, River>()
+  for (const river of rivers) {
+    const held = best.get(river.name)
+    if (
+      !held ||
+      river.gauges.length > held.gauges.length ||
+      (river.gauges.length === held.gauges.length && river.km > held.km)
+    ) {
+      best.set(river.name, river)
+    }
+  }
+  return [...best.values()]
 }
 
 interface Hit {
@@ -62,7 +87,7 @@ export function Search() {
     if (needle.length < 2 || !services) return []
     const out: Hit[] = []
 
-    for (const river of new Map([...rivers.values()].map((r) => [r.name, r])).values()) {
+    for (const river of mainSegments(rivers.values())) {
       if (!fold(river.name).includes(needle)) continue
       out.push({
         key: `river-${river.id}`,
