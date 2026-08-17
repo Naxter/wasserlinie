@@ -41,6 +41,10 @@ SEED = "/gast/pegeltabelle"
 # with a pause, and everything cached so a rerun costs nothing.
 PAUSE_SECONDS = 1.5
 TIMEOUT = httpx.Timeout(600.0, connect=30.0)
+# An hour-long run outlives its session cookie, and a public server occasionally
+# just says no. Both are worth one more try before giving up on a gauge.
+ATTEMPTS = 3
+BACKOFF_SECONDS = 20
 
 
 def open_session() -> httpx.Client:
@@ -54,6 +58,7 @@ def open_session() -> httpx.Client:
 
 
 def download_zip(client: httpx.Client, uuid: str, start: date, end: date) -> bytes:
+    """One gauge's archive, retrying a lost session or a transient refusal."""
     form = {
         "uuid": uuid,
         "parameter": PARAMETER,
@@ -61,13 +66,19 @@ def download_zip(client: httpx.Client, uuid: str, start: date, end: date) -> byt
         "end": f"{end.isoformat()}T23:00:00+01",
         "format": "json",
     }
-    prepared = client.post(PREPARE, data=form)
-    if prepared.status_code != 303:
-        raise RuntimeError(f"prepare-download answered {prepared.status_code} for {uuid}")
-    location = prepared.headers["location"]
-    payload = client.get(location)
-    payload.raise_for_status()
-    return payload.content
+    for attempt in range(1, ATTEMPTS + 1):
+        prepared = client.post(PREPARE, data=form)
+        if prepared.status_code == 303:
+            payload = client.get(prepared.headers["location"])
+            payload.raise_for_status()
+            return payload.content
+        if attempt == ATTEMPTS:
+            raise RuntimeError(f"prepare-download answered {prepared.status_code}")
+        # The usual cause is an expired JSESSIONID, which a fresh page fixes.
+        log.debug("retrying %s after %s", uuid, prepared.status_code)
+        time.sleep(BACKOFF_SECONDS)
+        client.get(SEED)
+    raise RuntimeError("unreachable")
 
 
 def readings_from_zip(blob: bytes) -> pd.DataFrame:
@@ -166,21 +177,28 @@ def run(paths: Paths, limit: int | None = None, only: str | None = None) -> None
         stations = stations[:limit]
 
     today = datetime.now().date()
+    cached = sum(1 for s in stations if (paths.cache / "archive" / f"{s['uuid']}.parquet").exists())
+    log.info("%d gauges, %d already cached", len(stations), cached)
+
     frames = []
+    failed = 0
     with open_session() as client:
         client.get(SEED)  # sets JSESSIONID
         for i, station in enumerate(stations, 1):
             try:
                 daily = cached_daily(client, paths, station["uuid"], today)
             except (httpx.HTTPError, RuntimeError, zipfile.BadZipFile) as exc:
+                # A gauge the archive has nothing for, or a bad day on the server.
+                # Either way it is skipped and picked up by the next run.
+                failed += 1
                 log.warning("%s: %s", station["name"], exc)
                 continue
             if daily.empty:
                 continue
             frames.append(daily)
-            if i % 25 == 0 or i == len(stations):
+            if i % 10 == 0 or i == len(stations):
                 rows = sum(len(f) for f in frames)
-                log.info("  %d/%d gauges, %d daily rows so far", i, len(stations), rows)
+                log.info("  %d/%d gauges, %d skipped, %d daily rows", i, len(stations), failed, rows)
 
     if not frames:
         raise SystemExit("no history downloaded")
