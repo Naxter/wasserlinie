@@ -29,6 +29,14 @@ from .config import PEGELONLINE_HOST, Paths, log
 # same as the live API, so the two series stitch together without conversion.
 
 ARCHIVE_START = date(2000, 1, 1)
+# The app places an *instantaneous* reading on this reference, so a daily mean
+# has to describe the day. Where a gauge moves further within a day than its
+# daily means move from year to year, the reading encodes the time of day and
+# nothing else. That is the tideway: the Elbe below Hamburg, the Este and
+# Krückau barrages, Helgoland. Gauges that publish MTnw/MThw are already caught
+# by `skip`; these publish no marks at all and would otherwise slip through and
+# take over the anomaly list at every low tide.
+MAX_DAILY_SWING_RATIO = 2.0
 # The seasonal curve is already smoothed by a ±15-day window, so storing it for
 # every day of the year is five times the bytes for no extra information. Every
 # fifth day is sampled and the app interpolates between them.
@@ -168,6 +176,8 @@ def seasonal_reference(
         values = group["mean"].to_numpy()
         doy = group["doy"].to_numpy()
         years = group["year"].to_numpy()
+        here: list[tuple[Any, ...]] = []
+        spreads: list[float] = []
         for target in range(1, 366, SEASONAL_STEP_DAYS):
             # Wrap around the turn of the year so 1 January sees late December.
             delta = np.abs(doy - target)
@@ -182,7 +192,15 @@ def seasonal_reference(
             # The extremes of the window anchor the ends of the scale, so "as low
             # as it has ever been on this date" lands on -1 rather than on a
             # slope guessed from the middle of the distribution.
-            rows.append((station, target, sample.min(), p10, p25, p50, p75, p90, sample.max(), n_years))
+            here.append((station, target, sample.min(), p10, p25, p50, p75, p90, sample.max(), n_years))
+            spreads.append(float(p90 - p10))
+        if not here:
+            continue
+        swing = float(np.median(group["max"].to_numpy() - group["min"].to_numpy()))
+        if swing >= MAX_DAILY_SWING_RATIO * float(np.median(spreads)):
+            log.debug("%s swings %.0f cm a day against a %.0f cm spread", station, swing, np.median(spreads))
+            continue
+        rows.extend(here)
     out = pd.DataFrame(rows, columns=columns)
     for c in ("lo", "p10", "p25", "p50", "p75", "p90", "hi"):
         out[c] = out[c].astype("float32")

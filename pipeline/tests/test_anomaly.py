@@ -99,6 +99,77 @@ def test_a_record_for_the_date_lands_on_minus_one():
     assert round(float(got[0]), 2) == -1.0
 
 
+def test_a_held_level_gets_no_seasonal_reference():
+    import pandas as pd
+
+    from wasserlinie.anomaly import seasonal_curves
+
+    # A canal reach held at 65 cm: the whole distribution is a millimetre wide,
+    # so a 2 cm wobble would otherwise be drawn as a record for the date.
+    canal = dict(station="canal", doy=226, lo=64.8, p10=64.9, p25=65.0, p50=65.1, p75=65.2, p90=65.3, hi=65.4)
+    river = dict(station="river", doy=226, lo=7, p10=82, p25=120, p50=185, p75=240, p90=295, hi=497)
+    curves = seasonal_curves(pd.DataFrame([canal, river]))
+    assert set(curves) == {("river", 226)}
+
+
+def test_a_gap_in_the_seasonal_record_falls_back_to_the_marks():
+    import pandas as pd
+
+    from wasserlinie.anomaly import seasonal_curves, states_for
+
+    # A gauge that only has a usable reference in January.
+    seasonal = pd.DataFrame(
+        [dict(station="a", doy=26, lo=90, p10=200, p25=260, p50=340, p75=430, p90=520, hi=800)]
+    )
+    curves = seasonal_curves(seasonal)
+    marks_curves = station_curves([{"uuid": "a", "refYears": 20, "marks": FULL}])
+    station, cm = np.array(["a"]), np.array([340.0])
+
+    # Four days from the sampled day: inside the window the reference was built
+    # from, so 340 is the median for the date.
+    near = states_for(marks_curves, station, cm, np.array([30]), curves)
+    assert round(float(near[0]), 3) == 0.0
+    # In August the nearest sampled day is 165 days away. Judging the reading
+    # against January would be a lie, so it drops back to the year-round marks,
+    # where 340 sits between MW and MHW.
+    far = states_for(marks_curves, station, cm, np.array([226]), curves)
+    assert round(float(far[0]), 3) == 0.35
+
+
+def test_a_distant_seasonal_day_without_marks_stays_unplaced():
+    import pandas as pd
+
+    from wasserlinie.anomaly import seasonal_curves, states_for
+
+    seasonal = pd.DataFrame(
+        [dict(station="a", doy=26, lo=90, p10=200, p25=260, p50=340, p75=430, p90=520, hi=800)]
+    )
+    curves = seasonal_curves(seasonal)
+    got = states_for({}, np.array(["a"]), np.array([340.0]), np.array([226]), curves)
+    # No marks to fall back to: grey is the honest answer, not January's curve.
+    assert np.isnan(got[0])
+
+
+def test_basis_only_claims_seasonal_where_the_reference_reaches():
+    import pandas as pd
+
+    from wasserlinie.anomaly import seasonal_curves, tag_basis
+
+    seasonal = pd.DataFrame(
+        [dict(station="a", doy=26, lo=90, p10=200, p25=260, p50=340, p75=430, p90=520, hi=800)]
+    )
+    curves = seasonal_curves(seasonal)
+    stations = [{"uuid": "a", "refYears": 20, "marks": FULL}]
+    marks_curves = station_curves(stations)
+
+    tag_basis(stations, marks_curves, curves, doy=30)
+    assert stations[0]["basis"] == "seasonal"
+    # Far from the only sampled day the panel must not promise a seasonal
+    # comparison, because the reading was not placed on one.
+    tag_basis(stations, marks_curves, curves, doy=226)
+    assert stations[0]["basis"] == "marks"
+
+
 def test_nearest_doy_wraps_around_new_year():
     from wasserlinie.anomaly import nearest_doy
 
@@ -108,15 +179,57 @@ def test_nearest_doy_wraps_around_new_year():
     assert list(nearest_doy(sampled, np.array([3, 364, 200, 350]))) == [1, 1, 181, 361]
 
 
+def test_seasonal_reference_skips_a_gauge_that_swings_all_day():
+    import pandas as pd
+
+    from wasserlinie.archive import seasonal_reference
+
+    days = pd.date_range("2000-01-01", "2020-12-31", freq="D")
+    rng = np.random.default_rng(3)
+    mean = 400 + rng.normal(0, 30, len(days))
+    frame = []
+    for name, swing in (("inland", 4.0), ("tideway", 300.0)):
+        frame.append(
+            pd.DataFrame(
+                {
+                    "station": name,
+                    "day": days,
+                    "mean": mean,
+                    "min": mean - swing / 2,
+                    "max": mean + swing / 2,
+                }
+            )
+        )
+    out = seasonal_reference(pd.concat(frame, ignore_index=True))
+    # Both have the same daily means; only one of them is described by them.
+    # A gauge that runs out three metres every low tide publishes no MTnw here,
+    # so the swing is the only thing that gives it away.
+    assert set(out["station"].unique()) == {"inland"}
+
+
+def test_a_scale_error_in_the_archive_is_not_a_reference():
+    import pandas as pd
+
+    from wasserlinie.anomaly import seasonal_curves
+
+    # Velsdorf's raw archive jumps a factor of 100 between eras.
+    broken = dict(
+        station="broken", doy=226, lo=2082, p10=5604, p25=9e4, p50=5.6e5, p75=5.61e5, p90=5.617e5, hi=5.63e5
+    )
+    river = dict(station="river", doy=226, lo=7, p10=82, p25=120, p50=185, p75=240, p90=295, hi=497)
+    assert set(seasonal_curves(pd.DataFrame([broken, river]))) == {("river", 226)}
+
+
 def test_seasonal_reference_skips_tidal_gauges():
     import pandas as pd
 
     from wasserlinie.archive import seasonal_reference
 
     days = pd.date_range("2000-01-01", "2020-12-31", freq="D")
+    level = np.linspace(100, 200, len(days))
     daily = pd.concat(
         [
-            pd.DataFrame({"station": u, "day": days, "mean": np.linspace(100, 200, len(days))})
+            pd.DataFrame({"station": u, "day": days, "mean": level, "min": level - 2, "max": level + 2})
             for u in ("inland", "tidal")
         ],
         ignore_index=True,

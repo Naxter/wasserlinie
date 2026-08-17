@@ -49,6 +49,27 @@ SEASONAL_ANCHORS = (
 MIN_SPAN_CM = 20.0
 MIN_REFERENCE_YEARS = 5
 
+# The seasonal reference is built from a ±15-day window, so a reading may only be
+# placed on the nearest sampled day if it actually falls inside that window. A
+# gauge whose record has seasonal holes — Vosswinkel has twelve usable days of
+# the year — would otherwise be judged in July against its March reference. Those
+# readings fall back to the year-round marks, which say less but say it truthfully.
+MAX_SNAP_DAYS = 15
+
+# p10..p90 carries state −0.5..+0.5, the width that decides whether a gauge is
+# called unusual at all. On the Mittellandkanal that band is a millimetre wide —
+# the level is held there on purpose — so a 2 cm wobble would be drawn as a
+# record for the date. Below this the reference is measuring the gauge, not the
+# water. It is the seasonal counterpart of MIN_SPAN_CM.
+MIN_SEASONAL_SPAN_CM = 5.0
+
+# The archive serves raw, unvalidated readings, and a handful of gauges carry a
+# scale error in them — Velsdorf's daily means jump between 56 and 562,900 cm.
+# No German gauge's ten-to-ninety band spans ten metres on a single date; the
+# widest real one is the lower Rhine at about three. Beyond this the reference
+# is describing a decimal point, not the water.
+MAX_SEASONAL_SPAN_CM = 1000.0
+
 # Tidal gauges are deliberately left out. Their level swings between low and
 # high water twice a day, so a position between MTnw and MThw would encode the
 # phase of the tide, not whether anything unusual is happening.
@@ -105,8 +126,16 @@ def seasonal_curves(seasonal: pd.DataFrame) -> dict[tuple[str, int], tuple[np.nd
         # A flat or contradictory reference cannot rank anything.
         if not np.all(np.diff(levels) > 0):
             continue
+        if not MIN_SEASONAL_SPAN_CM <= row.p90 - row.p10 <= MAX_SEASONAL_SPAN_CM:
+            continue
         out[(row.station, int(row.doy))] = (levels, states)
     return out
+
+
+def days_apart(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """Distance between two days of the year, the short way round."""
+    delta = np.abs(a - b)
+    return np.minimum(delta, 365 - delta)
 
 
 def nearest_doy(available: np.ndarray, doy: np.ndarray) -> np.ndarray:
@@ -153,18 +182,23 @@ def states_for(
         uuid = grouped[start]
         rows = order[start:stop]
         days = sampled_doy.get(uuid) if seasonal is not None and doy is not None else None
+        remaining = rows
         if days is not None and len(days):
             snapped = nearest_doy(days, doy[rows])
-            for day in np.unique(snapped):
+            near = days_apart(snapped, doy[rows]) <= MAX_SNAP_DAYS
+            for day in np.unique(snapped[near]):
                 curve = seasonal.get((uuid, int(day)))  # type: ignore[union-attr]
                 if curve is None:
                     continue
-                subset = rows[snapped == day]
+                subset = rows[near & (snapped == day)]
                 out[subset] = state_of(curve, cm[subset]).astype(np.float32)
-            continue
+            # Whatever the seasonal reference cannot reach still gets the marks.
+            remaining = rows[~near]
+            if not len(remaining):
+                continue
         curve = curves.get(uuid)
         if curve is not None:
-            out[rows] = state_of(curve, cm[rows]).astype(np.float32)
+            out[remaining] = state_of(curve, cm[remaining]).astype(np.float32)
     return out
 
 
@@ -179,12 +213,24 @@ def tag_basis(
     stations: list[dict[str, Any]],
     curves: dict[str, tuple[np.ndarray, np.ndarray]],
     seasonal: dict[tuple[str, int], tuple[np.ndarray, np.ndarray]] | None,
+    doy: int | None = None,
 ) -> None:
-    """Record what each gauge is judged against, so the app can word it honestly."""
-    seasonal_stations = {uuid for uuid, _ in (seasonal or {})}
+    """Record what each gauge is judged against, so the app can word it honestly.
+
+    A gauge only counts as seasonal where the reference reaches `doy`; otherwise
+    the panel would claim a comparison with the time of year that `states_for`
+    did not actually make.
+    """
+    sampled: dict[str, list[int]] = {}
+    for uuid, day in seasonal or {}:
+        sampled.setdefault(uuid, []).append(day)
     for st in stations:
         uuid = st["uuid"]
-        if uuid in seasonal_stations:
+        days = sampled.get(uuid)
+        reaches = bool(days) and (
+            doy is None or bool((days_apart(np.array(days), doy) <= MAX_SNAP_DAYS).any())
+        )
+        if reaches:
             st["basis"] = "seasonal"
         elif uuid in curves:
             st["basis"] = "marks"

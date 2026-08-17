@@ -92,7 +92,8 @@ def run(paths: Paths, days: int = 31, workers: int = 6) -> None:
     levels["state"] = anomaly.states_for(
         curves, levels["station"].to_numpy(), levels["value"].to_numpy(), doy, seasonal
     )
-    anomaly.tag_basis(records, curves, seasonal)
+    today = min(int(pd.Timestamp(now).tz_convert("Europe/Berlin").dayofyear), 365)
+    anomaly.tag_basis(records, curves, seasonal, today)
     levels.to_parquet(paths.levels, index=False, compression="zstd", row_group_size=50_000)
     log.info("levels.parquet: %d rows, %s → %s", len(levels), levels["ts"].min(), levels["ts"].max())
 
