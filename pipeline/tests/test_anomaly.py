@@ -106,3 +106,22 @@ def test_nearest_doy_wraps_around_new_year():
     # Day 364 is three days before 361 but only two days before day 1 once the
     # year wraps, so the wrap has to win.
     assert list(nearest_doy(sampled, np.array([3, 364, 200, 350]))) == [1, 1, 181, 361]
+
+
+def test_seasonal_reference_skips_tidal_gauges():
+    import pandas as pd
+
+    from wasserlinie.archive import seasonal_reference
+
+    days = pd.date_range("2000-01-01", "2020-12-31", freq="D")
+    daily = pd.concat(
+        [
+            pd.DataFrame({"station": u, "day": days, "mean": np.linspace(100, 200, len(days))})
+            for u in ("inland", "tidal")
+        ],
+        ignore_index=True,
+    )
+    out = seasonal_reference(daily, skip={"tidal"})
+    # A tidal gauge must not get a reference an instantaneous reading would be
+    # placed on; its level swings between two tides every day.
+    assert set(out["station"].unique()) == {"inland"}

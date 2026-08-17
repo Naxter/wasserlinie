@@ -137,16 +137,30 @@ def cached_daily(client: httpx.Client, paths: Paths, uuid: str, until: date) -> 
     return daily
 
 
-def seasonal_reference(daily: pd.DataFrame, window_days: int = 15, min_years: int = 5) -> pd.DataFrame:
+def seasonal_reference(
+    daily: pd.DataFrame,
+    window_days: int = 15,
+    min_years: int = 5,
+    skip: set[str] | None = None,
+) -> pd.DataFrame:
     """For each gauge and day of the year, the spread of daily means around that date.
 
     The window is ±`window_days` calendar days across every year on record, which
     is what makes "low for the time of year" a different statement from "low".
+
+    `skip` drops gauges that must not get one. Tidal gauges belong there: this
+    reference is built from daily means, but the app places an *instantaneous*
+    reading on it, and at a tidal gauge that would read the phase of the tide as
+    an anomaly. Their daily means would be a fine statistic — just not one this
+    app can use.
     """
     columns = ["station", "doy", "lo", "p10", "p25", "p50", "p75", "p90", "hi", "years"]
     if daily.empty:
         return pd.DataFrame(columns=columns)
-    frame = daily.copy()
+    frame = daily if not skip else daily[~daily["station"].isin(skip)]
+    frame = frame.copy()
+    if frame.empty:
+        return pd.DataFrame(columns=columns)
     frame["doy"] = frame["day"].dt.dayofyear.clip(upper=365)
     frame["year"] = frame["day"].dt.year
     rows = []
@@ -224,10 +238,12 @@ def run(paths: Paths, limit: int | None = None, only: str | None = None) -> None
         span["max"].max().date(),
     )
 
-    seasonal = seasonal_reference(history)
+    tidal = {s["uuid"] for s in stations if s.get("ref") == "tidal"}
+    seasonal = seasonal_reference(history, skip=tidal)
     seasonal.to_parquet(paths.seasonal, index=False, compression="zstd")
     log.info(
-        "seasonal.parquet: %d gauges with a seasonal reference, median %d years",
+        "seasonal.parquet: %d gauges with a seasonal reference (%d tidal skipped), median %d years",
         seasonal["station"].nunique(),
+        len(tidal & set(history["station"].unique())),
         int(seasonal["years"].median()) if len(seasonal) else 0,
     )
