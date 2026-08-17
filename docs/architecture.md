@@ -6,8 +6,7 @@ comes back in six months.
 ## The shape of it
 
 There is no server. A Python pipeline turns public APIs into static files; the
-browser reads those files and renders them. Everything in `public/data/` is a
-build artefact, committed so a stranger can run the app with no credentials.
+browser reads those files and renders them.
 
 ```text
 pipeline/                       public/data/                 src/
@@ -17,8 +16,13 @@ pipeline/                       public/data/                 src/
             BKG DLM1000         rivers-detail.json
   forecast  ──────────────────▶ forecast/*.parquet ───────▶ scene/   viewer, terrain, relief, camera, clock
   field     ──────────────────▶ field.bin + field.json ───▶ ui/      React panels (never touches the GPU)
+  history   ──────────────────▶ seasonal.parquet
+            PEGELONLINE archive (cache/history.parquet stays local)
   backtest  ──────────────────▶ docs/forecast-skill.md
 ```
+
+Nothing in `public/data/` is committed. It is all rebuilt from public sources,
+which is why the first thing a clone needs is a pipeline run.
 
 ## The one rule
 
@@ -54,16 +58,19 @@ flow speed looks the same on a fast and a slow machine.
 
 1. `fetch` pulls 15-minute readings from PEGELONLINE and averages them to
    hourly values in `levels.parquet`, merging with what earlier runs stored.
-2. `fetch` also builds a reference curve per gauge from its published
-   long-term marks and writes a `rank` (0..1) per reading — see `anomaly.py`.
-3. `field` walks every river that has gauges, interpolates the level index
+2. `fetch` places every reading on that gauge's own scale and writes it as
+   `state` — see `anomaly.py`. Where `history` has fetched the gauge's archive
+   back to 2000, the scale is its own record *for this day of the year*;
+   otherwise it falls back to the published year-round marks. `stations.json`
+   records which in `basis` so the app never overstates the comparison.
+3. `field` walks every river that has gauges, interpolates the state
    between neighbouring gauges along the line, and packs the result into
    `field.bin`: one small grid per river, position along the river on one
    axis, time on the other, three bytes per cell.
 4. `RiverLayer.load` turns each river's grid into a canvas and hands it to a
    Cesium `Material` as the `field` uniform.
 5. `river.glsl` samples that texture at `(s, time)` where `s` is the position
-   along the polyline. The red channel becomes the level, which drives width,
+   along the polyline. Red becomes the state, which the ramp turns into colour,
    glow and pulse speed; green says measured or forecast; blue carries the
    forecast spread and softens the edge.
 
@@ -119,3 +126,5 @@ request instead of letting it land on a disposed layer.
   files are read directly instead.
 - **No entity API.** Everything visual is a primitive with an explicit
   lifetime, because entities hide when work happens.
+- **No committed data.** It changes every day and would bloat the history for
+  nothing. `wasserlinie all` rebuilds it in minutes.
