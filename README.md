@@ -1,6 +1,6 @@
 # Wasserlinie
 
-![Germany's river network as glowing veins on dark terrain](docs/hero.png)
+![Germany's river network coloured by how unusual each gauge is](docs/hero.png)
 
 Germany's river network as a living map, coloured by how unusual the water is
 **for each gauge**. A raw "312 cm" tells you nothing; the same reading placed
@@ -31,18 +31,17 @@ push past "now" and it becomes a forecast, visibly softer the further it goes.
   worst first, each against the mark it is judged by. Click one to fly to it;
   the counts in the header filter the map to the dry or the wet ones.
 - **Rivers that carry data.** ~2,500 river parts from the official German
-  topographic model, drawn on real terrain. The parts that have gauges are
-  driven by measurements: the level between neighbouring gauges is
-  interpolated along the river, and the shader turns it into colour, glow and
-  pulse speed. Line width stays absolute, so the Rhine still looks like the
-  Rhine at low water.
+  topographic model. The parts that have gauges are driven by measurements: the
+  level between neighbouring gauges is interpolated along the river and drawn as
+  a gradient down it. Line width follows the river's size, not its water, so the
+  Rhine still looks like the Rhine at low water.
 - **Grey means we do not know.** Of the 691 PEGELONLINE stations, 443 get a
   colour. The rest stay grey on purpose: 98 tidal gauges, where a level between
   two tides says where the tide is rather than whether anything is wrong, and
   150 with neither a usable archive nor usable marks.
-- **Time is physical.** One slider covers the stored history plus 72 hours
-  ahead. The sun follows it, so scrubbing moves the terminator across the
-  country.
+- **Time, and only time.** One slider covers the stored history plus 72 hours
+  ahead. Nothing else changes as it moves — no light, no motion — so the same
+  river on two different days can be compared.
 - **Forecast that looks like a forecast, and admits what it knows.** A small
   gradient-boosting model produces p10/p50/p90 per station, with the band
   widened until it actually covers 80 % of observations in a hindcast. On the
@@ -50,31 +49,31 @@ push past "now" and it becomes a forecast, visibly softer the further it goes.
   line. Measured skill and its limits: [docs/forecast-skill.md](docs/forecast-skill.md).
 - **No servers.** The pipeline writes Parquet and JSON files; the browser
   reads the Parquet directly with hyparquet. Static hosting is enough.
-- **No satellite imagery, no ion token.** Terrain and a hand-made hillshade
-  come from public elevation tiles, rendered in the browser.
+- **No basemap, no tiles, no key.** The map is the country outline, the river
+  network and the gauges, all from the pipeline's own files. Nothing is fetched
+  from a tile server, so there is no account and no quota.
 
 ## How it is built
 
 ```text
-pipeline/  Python                        public/data/            src/  TypeScript + Cesium
+pipeline/  Python                        public/data/            src/  TypeScript + MapLibre
 ─────────────────────────────────        ──────────────────      ─────────────────────────────
-PEGELONLINE ─ fetch ─────────────────▶   stations.json           scene/   terrain, relief, camera,
-              (hourly means, 90 d)       levels.parquet ───────▶          post-processing, clock
-BKG DLM1000 ─ rivers ────────────────▶   rivers.json    ───────▶ layers/  rivers (GLSL field),
-              (axes + polygon skeleton)                                    gauges (billboards)
+PEGELONLINE ─ fetch ─────────────────▶   stations.json           map/     style, camera, clock,
+              (hourly means, 90 d)       levels.parquet ───────▶          rivers, gauges
+BKG DLM1000 ─ rivers ────────────────▶   rivers.json    ───────▶ color/   the anomaly ramp
+              (axes + polygon skeleton)  germany.json
 levels ────── forecast (GBM p10/50/90) ▶ forecast/*.parquet ───▶ data/    hyparquet, timeline
-all ────────── field (interpolate) ────▶ field.bin + field.json ▶ ui/     React panels, time bar
+history ───── seasonal reference ──────▶ seasonal.parquet ─────▶ ui/      React panels, time bar
 ```
 
 The one rule that matters: React never touches a GPU buffer. The UI reads
-and writes a small store; the scene subscribes to it. How the pieces fit,
-what runs per frame and where Cesium objects are created and destroyed:
+and writes a small store; the map subscribes to it. How the pieces fit and
+where map objects are created and destroyed:
 [docs/architecture.md](docs/architecture.md).
 
-Rivers with gauges each get a tiny texture — position along the river on one
-axis, time on the other, three bytes per cell (level index, measured or
-forecast, forecast spread). The fragment shader samples it at the slider's
-time. Interpolating between gauges happens once, in Python, not per frame.
+Nothing runs per frame. There is no animation to drive, so a repaint happens
+only when the clock moves: each gauged river gets its own layer, and its colour
+is a gradient rebuilt from the states of the gauges along it.
 
 ## Quickstart
 
@@ -97,9 +96,8 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:5173>. Terrain tiles stream from AWS on first view. If
-you start the app before the pipeline has run, it says so and tells you what to
-run.
+Open <http://localhost:5173>. Everything the map draws is local. If you start
+the app before the pipeline has run, it says so and tells you what to run.
 
 ## The pipeline
 
@@ -173,8 +171,7 @@ cd pipeline && ruff check . && pytest
 
 - Water levels: [PEGELONLINE](https://www.pegelonline.wsv.de) — WSV, free for reuse.
 - River network and country outline: [BKG DLM1000 and VG2500](https://gdz.bkg.bund.de) — © GeoBasis-DE / BKG 2025, [dl-de/by-2-0](https://www.govdata.de/dl-de/by-2-0).
-- Terrain: [AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) — Mapzen, SRTM, EU-DEM and others.
-- Rendering: [CesiumJS](https://cesium.com/platform/cesiumjs/); Parquet in the browser: [hyparquet](https://github.com/hyparam/hyparquet).
+- Rendering: [MapLibre GL JS](https://maplibre.org/); Parquet in the browser: [hyparquet](https://github.com/hyparam/hyparquet).
 
 ## License
 
