@@ -111,8 +111,16 @@ def to_daily(df: pd.DataFrame, uuid: str) -> pd.DataFrame:
     return daily[daily["n"] >= 24].reset_index(drop=True)
 
 
+EMPTY_COLUMNS = ["station", "day", "mean", "min", "max", "n"]
+
+
 def cached_daily(client: httpx.Client, paths: Paths, uuid: str, until: date) -> pd.DataFrame:
-    """Daily history for one gauge, downloading it once and reusing it afterwards."""
+    """Daily history for one gauge, downloading it once and reusing it afterwards.
+
+    Gauges the archive holds nothing for — foreign ones, lakes, anything built
+    after 2000 — get an empty file rather than no file, so they are asked once
+    and never again.
+    """
     raw_dir = paths.cache / "archive"
     raw_dir.mkdir(parents=True, exist_ok=True)
     daily_path = raw_dir / f"{uuid}.parquet"
@@ -120,7 +128,10 @@ def cached_daily(client: httpx.Client, paths: Paths, uuid: str, until: date) -> 
         return pd.read_parquet(daily_path)
 
     blob = download_zip(client, uuid, ARCHIVE_START, until)
-    daily = to_daily(readings_from_zip(blob), uuid)
+    try:
+        daily = to_daily(readings_from_zip(blob), uuid)
+    except (zipfile.BadZipFile, StopIteration, ValueError):
+        daily = pd.DataFrame(columns=EMPTY_COLUMNS)
     daily.to_parquet(daily_path, index=False, compression="zstd")
     time.sleep(PAUSE_SECONDS)
     return daily

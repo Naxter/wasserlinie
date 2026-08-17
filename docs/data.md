@@ -41,6 +41,12 @@ them in Berlin time.
 | `value`   | float32         | water level in cm, hourly mean |
 | `state`   | float32         | position on the gauge's scale, null where it cannot be placed |
 
+`state` comes from one of two references. Where `wasserlinie history` has
+fetched a gauge's archive, it is the seasonal one below; otherwise it falls back
+to the gauge's year-round marks. `stations.json` records which in `basis`, and
+the app words its verdict accordingly — it never claims "for this time of year"
+unless it can back it.
+
 ### The state scale
 
 `state` is what every colour in the app is driven by. It places a reading on
@@ -134,6 +140,39 @@ The manifest lists the newest runs first; the app loads `runs[0]`.
 | `stateLow`, `stateHigh` | float32, the band on the state scale |
 
 Every 3 hours out to 72 hours after the last measurement.
+
+## seasonal.parquet
+
+What counts as normal at a gauge *on this date*, from `wasserlinie history`.
+Built from every daily mean since 2000 in a ±15-day window around the day of
+the year, across all years.
+
+| column | type | note |
+| --- | --- | --- |
+| `station` | string | station uuid |
+| `doy` | int16 | day of the year, sampled every 5 days |
+| `lo`, `hi` | float32 | lowest and highest daily mean seen in the window, in cm |
+| `p10`, `p25`, `p50`, `p75`, `p90` | float32 | percentiles of those daily means, in cm |
+| `years` | int16 | how many distinct years the window drew on |
+
+Those seven levels map onto the state scale as −1, −0.5, −0.25, 0, +0.25, +0.5,
++1, so a reading at the seasonal record low lands on −1 exactly. A gauge needs
+at least 5 years and 30 samples in the window to get a row at all; the day is
+sampled every 5 days because the window already smooths the curve, and storing
+all 365 was five times the bytes for no extra information.
+
+## history.parquet (cache only)
+
+Daily means per gauge back to 2000, in `pipeline/cache/`. It is the raw material
+for `seasonal.parquet` and is never shipped: ~36 MB for all gauges, against
+1.2 MB for the reference derived from it.
+
+| column | type | note |
+| --- | --- | --- |
+| `station` | string | station uuid |
+| `day` | timestamp | local calendar day |
+| `mean`, `min`, `max` | float32 | of that day's 15-minute readings, in cm |
+| `n` | int16 | readings that day; days under 24 are dropped |
 
 ## germany.json
 
