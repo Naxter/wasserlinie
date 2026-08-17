@@ -1,23 +1,25 @@
 import { rampGradientCss } from '../layers/ramp'
 import { Swatch } from './Swatch'
 
-// The scale's own anchors are percentiles of this gauge's record for this date:
-// p10 sits at -0.5 and p90 at +0.5 (see anomaly.py). So the honest label for
-// "selten" is the quantity itself — one year in ten — and the honest width for
-// "normal" is eight tenths of the bar. Drawing the bands equal-width taught the
-// opposite.
+// What sits under these labels is the colour ramp, so the widths have to be
+// positions on it and nothing else. The scale's anchors are percentiles of this
+// gauge's record for this date: p10 at -0.5 and p90 at +0.5 on a -1..+1 axis
+// (see anomaly.py), which puts the two dividing lines at a quarter and three
+// quarters.
+//
+// They used to be drawn as frequencies instead — a 70% "üblich" for something
+// the text called eight years in ten — which put the line under the label at
+// state ±0.7. Anyone tracing a river's colour down to the boundary read the
+// wrong verdict off it. How often each band happens is what the sentence
+// underneath is for; the bar can only carry one axis, and it is this one.
 //
 // "Niedrigwasser" and "Hochwasser" are deliberately not used: in German those
 // name official events with legal warning thresholds, and this app has neither
 // the data nor the standing to assert one.
-// The record bands are a twentieth of the bar each — too narrow to hold a word
-// without truncating it, so they are left to the sentence underneath.
 const BANDS: { width: number; label: string }[] = [
-  { width: 5, label: '' },
-  { width: 10, label: 'selten' },
-  { width: 70, label: 'üblich' },
-  { width: 10, label: 'selten' },
-  { width: 5, label: '' },
+  { width: 25, label: 'selten' },
+  { width: 50, label: 'üblich' },
+  { width: 25, label: 'selten' },
 ]
 
 /** What the colours mean. Without this the map is decoration. */

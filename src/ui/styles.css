@@ -1251,8 +1251,8 @@ button {
   height: 11px;
 }
 
-/* The bands are as wide as the thing they describe is common, so the picture
-   teaches the statistics before a word is read. */
+/* Each band is as wide as the stretch of ramp it names, so the dividing lines
+   fall on p10 and p90 and a colour can be traced down to its verdict. */
 .legend-scale .bands {
   display: flex;
   margin-top: 5px;
@@ -1279,7 +1279,7 @@ button {
   white-space: nowrap;
 }
 
-.legend-scale .bands span:nth-child(3) {
+.legend-scale .bands span:nth-child(2) {
   color: var(--ink);
 }
 
