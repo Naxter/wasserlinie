@@ -7,12 +7,19 @@ updates:
     groups:
       npm:
         patterns: ["*"]
+      # Advisories should not wait for the monthly window.
+      npm-security:
+        applies-to: security-updates
+        patterns: ["*"]
   - package-ecosystem: pip
     directory: /pipeline
     schedule:
       interval: monthly
     groups:
       pip:
+        patterns: ["*"]
+      pip-security:
+        applies-to: security-updates
         patterns: ["*"]
   - package-ecosystem: github-actions
     directory: /
