@@ -4,6 +4,11 @@
   "private": true,
   "description": "Germany's river network as a living map, driven by real gauge readings.",
   "license": "MIT",
+  "author": "naxter",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Naxter/wasserlinie.git"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"

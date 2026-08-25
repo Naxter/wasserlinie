@@ -3,7 +3,8 @@ dist/
 *.tsbuildinfo
 
 .env
-.env.local
+.env.*
+!.env.example
 
 # Generated data. The pipeline rebuilds all of it; see the README.
 public/data/*
