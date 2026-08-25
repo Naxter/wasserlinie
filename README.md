@@ -1,5 +1,10 @@
 # Wasserlinie
 
+[![CI](https://github.com/Naxter/wasserlinie/actions/workflows/ci.yml/badge.svg)](https://github.com/Naxter/wasserlinie/actions/workflows/ci.yml)
+![MIT license](https://img.shields.io/badge/license-MIT-green)
+![Node 22+](https://img.shields.io/badge/node-22%2B-brightgreen)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
+
 ![Germany's river network coloured by how unusual each gauge is](docs/hero.png)
 
 Germany's river network as a living map, coloured by how unusual the water is
@@ -11,11 +16,6 @@ Normal is the least saturated point on the scale, so a quiet country recedes
 and anything unusual saturates, in either direction and by the same amount.
 Drag the time slider and the whole network moves with it;
 push past "now" and it becomes a forecast, visibly softer the further it goes.
-
-[![CI](https://github.com/Naxter/wasserlinie/actions/workflows/ci.yml/badge.svg)](https://github.com/Naxter/wasserlinie/actions/workflows/ci.yml)
-![MIT license](https://img.shields.io/badge/license-MIT-green)
-![Node 22+](https://img.shields.io/badge/node-22%2B-brightgreen)
-![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
 
 ![Station panel for Koblenz with measured levels and the forecast band](docs/station.png)
 
