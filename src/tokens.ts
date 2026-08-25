@@ -155,13 +155,14 @@ export const map = {
 // Simulated seconds per real second. One rate cannot serve both sliders: the
 // live window is a month, the long view is twenty-six years, and at six hours
 // a second the whole record would take eleven hours to play. The long view
-// runs at ninety days a second, so it crosses in under two minutes and the
-// yearly rise and fall is still visible as it goes.
+// runs at fifty days a second, so it crosses in a little over three minutes —
+// slow enough to watch one dry summer arrive rather than see the whole record
+// flicker past, and still not a sitting.
 export const time = {
   historyDays: 90,
   forecastHours: 72,
   playSpeed: 3600 * 6,
-  historyPlaySpeed: 86_400 * 90,
+  historyPlaySpeed: 86_400 * 50,
 } as const
 
 export const gauge = {

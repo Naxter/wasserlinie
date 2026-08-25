@@ -16,12 +16,14 @@ describe('advance', () => {
     expect(play(1, 'live')).toBeCloseTo(0.25, 6)
   })
 
-  it('runs the whole record fast enough to watch', () => {
-    // Twenty-six years at ninety days a second crosses in under two minutes;
-    // at the live rate the same record would take eleven hours.
-    expect(play(1, 'history')).toBeCloseTo(90, 6)
+  it('runs the whole record at a speed you can follow', () => {
+    // Fifty days a second crosses twenty-six years in a little over three
+    // minutes — long enough to watch a dry summer arrive, where at the live
+    // rate the same record would take eleven hours.
+    expect(play(1, 'history')).toBeCloseTo(50, 6)
     const record = 9726
-    expect(record / play(1, 'history')).toBeLessThan(120)
+    expect(record / play(1, 'history')).toBeGreaterThan(150)
+    expect(record / play(1, 'history')).toBeLessThan(240)
     expect(record / play(1, 'live')).toBeGreaterThan(30_000)
   })
 
