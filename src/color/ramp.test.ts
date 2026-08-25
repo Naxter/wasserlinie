@@ -1,73 +1,91 @@
 import { describe, expect, it } from 'vitest'
-import { anomalyRamp, unknownColor } from '../tokens'
-import { RAMP_MAX, RAMP_MIN, RAMP_WIDTH, rampCss, rampGradientCss, rampPixels, sampleRamp } from './ramp'
+import { anomalyRamp, hexToRgb, unknownColor } from '../tokens'
+import { rgbToOklab } from './oklab'
+import { RAMP_MAX, RAMP_MIN, rampCss, rampGradientCss, sampleRamp } from './ramp'
 
-describe('anomaly ramp', () => {
-  it('returns each stop colour at its own state', () => {
+const dE = (a: [number, number, number], b: [number, number, number]): number => {
+  const x = rgbToOklab(a)
+  const y = rgbToOklab(b)
+  return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2])
+}
+const chroma = (c: [number, number, number]): number => {
+  const [, a, b] = rgbToOklab(c)
+  return Math.hypot(a, b)
+}
+
+describe('sampleRamp', () => {
+  it('returns each stop at its own state', () => {
+    // Rounded, because that is the form the map and the legend both use: the
+    // Oklab round-trip lands a fraction of a channel away from the hex.
     for (const stop of anomalyRamp) {
-      const { rgb } = sampleRamp(stop.state)
-      const hex = '#' + rgb.map((c) => Math.round(c).toString(16).padStart(2, '0')).join('')
-      expect(hex.toUpperCase()).toBe(stop.color.toUpperCase())
+      expect(sampleRamp(stop.state).map(Math.round)).toEqual(hexToRgb(stop.color))
     }
   })
 
-  it('keeps the normal band a single calm colour', () => {
-    const left = sampleRamp(-0.2)
-    const right = sampleRamp(0.2)
-    expect(left.rgb).toEqual(right.rgb)
-    expect(sampleRamp(0).rgb).toEqual(left.rgb)
+  it('holds one colour across the normal band', () => {
+    expect(sampleRamp(0)).toEqual(sampleRamp(-0.2))
+    expect(sampleRamp(0)).toEqual(sampleRamp(0.2))
   })
 
-  it('clamps beyond the ends instead of extrapolating a colour', () => {
-    expect(sampleRamp(-5).rgb).toEqual(sampleRamp(RAMP_MIN).rgb)
-    expect(sampleRamp(5).rgb).toEqual(sampleRamp(RAMP_MAX).rgb)
-  })
-
-  it('says grey when there is no state at all', () => {
-    expect(rampCss(null)).toBe(unknownColor)
-    expect(rampCss(NaN)).toBe(unknownColor)
+  it('clamps beyond the ends rather than extrapolating', () => {
+    expect(sampleRamp(-5)).toEqual(sampleRamp(RAMP_MIN))
+    expect(sampleRamp(5)).toEqual(sampleRamp(RAMP_MAX))
   })
 })
 
-describe('ramp texture', () => {
-  it('puts the colour where the shader looks for it', () => {
-    // Textures upload bottom-up: the shader reads colour at v=0.25, which is
-    // the second row here. Swapping the rows paints a drought flood-red.
-    const px = rampPixels()
-    const dry = sampleRamp(RAMP_MIN)
-    const colour = RAMP_WIDTH * 4
-    expect([px[colour], px[colour + 1], px[colour + 2]]).toEqual(dry.rgb.map(Math.round))
-    expect(px[0]).toBe(Math.round(dry.glow * 255))
-    const wet = sampleRamp(RAMP_MAX)
-    const last = (RAMP_WIDTH * 2 - 1) * 4
-    expect([px[last], px[last + 1], px[last + 2]]).toEqual(wet.rgb.map(Math.round))
+// The map has no glow and no second channel, so these are the properties that
+// decide whether it can be read at all. A near-white wet end once put p90
+// within dE 0.08 of normal, which made "üblich" and "selten, mehr als sonst"
+// one colour on screen.
+describe('readability', () => {
+  it('keeps every unusual level clearly apart from normal', () => {
+    const normal = sampleRamp(0)
+    for (const state of [-1, -0.75, -0.5, 0.5, 0.75, 1]) {
+      expect(dE(sampleRamp(state), normal)).toBeGreaterThan(0.15)
+    }
+  })
+
+  it('treats the two directions alike', () => {
+    // Neither arm may be more than half again as visible as the other.
+    for (const s of [0.5, 0.75, 1]) {
+      const dry = dE(sampleRamp(-s), sampleRamp(0))
+      const wet = dE(sampleRamp(s), sampleRamp(0))
+      expect(Math.max(dry, wet) / Math.min(dry, wet)).toBeLessThan(1.5)
+    }
+  })
+
+  it('saturates outward from the normal band, so a quiet country recedes', () => {
+    for (const arm of [-1, 1]) {
+      const along = [0.2, 0.5, 0.75, 1].map((s) => chroma(sampleRamp(arm * s)))
+      for (let i = 1; i < along.length; i++) expect(along[i]!).toBeGreaterThan(along[i - 1]!)
+    }
+  })
+
+  it('separates the far end of each arm from the level that only just counts', () => {
+    expect(dE(sampleRamp(1), sampleRamp(0.5))).toBeGreaterThan(0.15)
+    expect(dE(sampleRamp(-1), sampleRamp(-0.5))).toBeGreaterThan(0.15)
+  })
+
+  it('keeps "no verdict" out of the ramp', () => {
+    // Grey must not read as a level, in either direction.
+    for (const state of [-1, -0.5, 0, 0.5, 1]) {
+      expect(dE(sampleRamp(state), hexToRgb(unknownColor))).toBeGreaterThan(0.1)
+    }
   })
 })
 
-describe('ramp semantics', () => {
-  it('is warm when dry and cool when wet', () => {
-    const dry = sampleRamp(-1)
-    const wet = sampleRamp(1)
-    expect(dry.rgb[0]).toBeGreaterThan(dry.rgb[2]) // red beats blue
-    expect(wet.rgb[2]).toBeGreaterThan(wet.rgb[0]) // blue beats red
-  })
-
-  it('is dimmest at normal and brightest at both extremes', () => {
-    const normal = sampleRamp(0).glow
-    expect(sampleRamp(-1).glow).toBeGreaterThan(normal)
-    expect(sampleRamp(1).glow).toBeGreaterThan(normal)
-    // A record low must not be drawn fainter than a record high.
-    expect(sampleRamp(-1).glow).toBeCloseTo(sampleRamp(1).glow, 5)
-  })
-
-  it('still runs slow when dry and fast when full', () => {
-    expect(sampleRamp(-1).speed).toBeLessThan(sampleRamp(0).speed)
-    expect(sampleRamp(1).speed).toBeGreaterThan(sampleRamp(0).speed)
-  })
-
-  it('gives the legend the same colours as the map', () => {
+describe('rampGradientCss', () => {
+  it('runs from the dry end to the wet end', () => {
     const css = rampGradientCss(4)
-    const mid = sampleRamp(0).rgb.map(Math.round).join(',')
-    expect(css).toContain(`rgb(${mid}) 50.0%`)
+    expect(css.startsWith('linear-gradient(90deg,')).toBe(true)
+    expect(css).toContain(rampCss(RAMP_MIN).replace('rgb(', 'rgb(').replace(/\s/g, ''))
+    expect(css).toContain('100.0%')
+  })
+})
+
+describe('rampCss', () => {
+  it('says grey when there is nothing to say', () => {
+    expect(rampCss(null)).toBe(unknownColor)
+    expect(rampCss(Number.NaN)).toBe(unknownColor)
   })
 })

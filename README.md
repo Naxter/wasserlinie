@@ -7,8 +7,9 @@ Germany's river network as a living map, coloured by how unusual the water is
 against that gauge's own mean low water, mean water and record levels tells
 you at a glance whether a river is running dry. Warm means the water is
 leaving — sand, amber, then the red of a record low. Cool means it is rising.
-Normal is the dimmest point on the scale, so a quiet country recedes and
-anything unusual lights up, in either direction. Drag the time slider and the whole network moves with it;
+Normal is the least saturated point on the scale, so a quiet country recedes
+and anything unusual saturates, in either direction and by the same amount.
+Drag the time slider and the whole network moves with it;
 push past "now" and it becomes a forecast, visibly softer the further it goes.
 
 [![CI](https://github.com/Naxter/wasserlinie/actions/workflows/ci.yml/badge.svg)](https://github.com/Naxter/wasserlinie/actions/workflows/ci.yml)
