@@ -78,27 +78,47 @@ is a gradient rebuilt from the states of the gauges along it.
 
 ## Quickstart
 
-The data is not in the repository — it is rebuilt from public sources, so the
-first step is to fetch it. You need Node 22+ and Python 3.11+; no accounts and
-no API keys.
+No data ships with the repository, so the first run seeds an invented one: a
+made-up country, made-up rivers and made-up readings, written in about three
+seconds with no download and no account. You need Node 22+ and Python 3.11+.
 
 ```bash
 cd pipeline
 python -m venv .venv && . .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
-python -m wasserlinie all
-```
-
-That writes everything the app needs into `public/data/`. It takes a few
-minutes, most of it a one-off 56 MB download of the river geometry. Then:
-
-```bash
+python -m wasserlinie demo
+cd ..
 npm install
 npm run dev
 ```
 
-Open <http://localhost:5173>. Everything the map draws is local. If you start
-the app before the pipeline has run, it says so and tells you what to run.
+Open <http://localhost:5173>. Nothing there is real — the coastline is not a
+country and the gauges never existed — but every part of the app works: the
+scale, the anomaly list, the search, the station chart and the forecast band.
+
+## Using real data
+
+`wasserlinie all` fetches gauges and readings from PEGELONLINE and the river
+geometry from the BKG. A few minutes, most of it a one-off 56 MB download, and
+still no account and no API key.
+
+```bash
+cd pipeline
+python -m wasserlinie all
+```
+
+Both steps write into `public/data/`, so running one after the other simply
+replaces what the other left. Delete `public/data/` to start clean.
+
+One caveat worth knowing before you invest the time: the seasonal comparison
+this app is built around — low *for this date* — comes from `wasserlinie
+history`, which downloads every gauge's record back to 2000. That is several
+hours, cached per gauge and resumable. Until it has run, real gauges fall back
+to their published year-round marks, and the app says which of the two it used.
+The demo ships a synthetic seasonal reference, so it shows the seasonal wording
+from the start.
+
+If you start the app before either has run, it says so and tells you what to run.
 
 ## The pipeline
 
@@ -108,6 +128,7 @@ the app before the pipeline has run, it says so and tells you what to run.
 | ---------- | --------------------------------------------------------------------------------------------------- |
 | `fetch`    | Stations and 15-minute readings from PEGELONLINE → hourly `levels.parquet`, `stations.json`. Merges with earlier runs and keeps 90 days. |
 | `rivers`   | Downloads BKG DLM1000 (56 MB, cached), merges river axes, skeletonises wide rivers that only exist as polygons, snaps gauges onto them → `rivers.json`, `germany.json`. |
+| `demo`     | Writes an invented country, network and month of readings into `public/data/` in about three seconds. No network. Not part of `all`. |
 | `forecast` | Trains three quantile GBMs on all inland stations at once, calibrates the band against held-out hours and writes a run into `forecast/` plus `manifest.json`. |
 
 Two more are deliberately outside `all`, because each is a long job you run

@@ -4,7 +4,7 @@ import argparse
 import logging
 import sys
 
-from . import archive, backtest, daily, fetch, forecast, rivers
+from . import archive, backtest, daily, demo, fetch, forecast, rivers
 from .config import Paths
 
 STEPS = {
@@ -12,11 +12,13 @@ STEPS = {
     "rivers": rivers.run,
     "forecast": forecast.run,
     "backtest": backtest.run,
+    "demo": demo.run,
     "history": archive.run,
     "history-grid": daily.run,
 }
 # `backtest` is deliberately not part of `all`: it retrains the model and is
 # something you run when you want to know whether the forecast is any good.
+# `demo` is not either: it overwrites the output directory with invented data.
 # `history-grid` is, because it is quick and reads what `history` already
 # downloaded — but it is skipped when there is no archive to read.
 ORDER = ["fetch", "rivers", "forecast", "history-grid"]
