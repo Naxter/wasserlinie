@@ -20,10 +20,12 @@ const QUANTUM = 15 * 60 * 1000
 export class GaugeLayer implements VisualLayer {
   readonly id = 'gauges' as const
   private map: MapLibreMap | null = null
-  private timeline: TimeSource | null = null
+  private ctx: LayerContext | null = null
   private last: string[] = []
   private visible = true
   private painted = Number.NaN
+  /** Which source `last` was filled from; the mode switch replaces it. */
+  private source: TimeSource | null = null
   private active: number | null = null
   private unsubscribe: (() => void) | null = null
 
@@ -32,7 +34,8 @@ export class GaugeLayer implements VisualLayer {
   load(ctx: LayerContext, signal: AbortSignal): Promise<void> {
     signal.throwIfAborted()
     this.map = ctx.map
-    this.timeline = ctx.timeline
+    // Held as the context, not as the source on it — see RiverLayer.
+    this.ctx = ctx
     const stations = ctx.timeline.stations
     this.last = new Array<string>(stations.length).fill('')
     this.map.addSource(SRC_GAUGES, gaugeSource(stations))
@@ -46,8 +49,8 @@ export class GaugeLayer implements VisualLayer {
 
   /** Ring the gauge the sidebar is talking about, so the two agree on screen. */
   private mark(uuid: string | null): void {
-    if (!this.map || !this.timeline) return
-    const next = uuid === undefined || uuid === null ? null : (this.timeline.slotOf(uuid) ?? null)
+    if (!this.map || !this.ctx) return
+    const next = uuid === undefined || uuid === null ? null : (this.ctx.timeline.slotOf(uuid) ?? null)
     if (next === this.active) return
     if (this.active !== null) this.map.setFeatureState({ source: SRC_GAUGES, id: this.active }, { active: false })
     if (next !== null) this.map.setFeatureState({ source: SRC_GAUGES, id: next }, { active: true })
@@ -55,12 +58,17 @@ export class GaugeLayer implements VisualLayer {
   }
 
   update(simTime: number): void {
-    if (!this.map || !this.timeline || !this.visible) return
+    if (!this.map || !this.ctx || !this.visible) return
+    const timeline = this.ctx.timeline
     const t = Math.round(simTime / QUANTUM) * QUANTUM
-    if (t === this.painted) return
+    if (t === this.painted && timeline === this.source) return
     this.painted = t
+    // A different source answers differently for the same instant, so the
+    // colours remembered from the old one cannot be compared against.
+    if (timeline !== this.source) this.last.fill('')
+    this.source = timeline
     for (let i = 0; i < this.last.length; i++) {
-      const sample = this.timeline.sample(i, simTime)
+      const sample = timeline.sample(i, simTime)
       const color = sample && !Number.isNaN(sample.state) ? rampCss(sample.state) : ''
       if (color === this.last[i]) continue
       this.last[i] = color

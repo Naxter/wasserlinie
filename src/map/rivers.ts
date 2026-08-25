@@ -35,17 +35,22 @@ interface Gauged {
 export class RiverLayer implements VisualLayer {
   readonly id = 'rivers' as const
   private map: MapLibreMap | null = null
-  private timeline: TimeSource | null = null
+  private ctx: LayerContext | null = null
   private gauged: Gauged[] = []
   private layerIds: string[] = []
   private visible = true
   private painted = Number.NaN
+  /** Which source `painted` was painted from; the mode switch replaces it. */
+  private source: TimeSource | null = null
 
   async load(ctx: LayerContext, signal: AbortSignal): Promise<void> {
     const rivers = await loadRivers(signal)
     signal.throwIfAborted()
     this.map = ctx.map
-    this.timeline = ctx.timeline
+    // The context is held, never the time source on it: switching to the long
+    // view swaps that source, and a layer holding the old one goes on asking
+    // the ninety-day window about 2003 and gets null for every gauge.
+    this.ctx = ctx
 
     this.map.addSource(SRC_RIVERS, riverSource(rivers.rivers))
     for (const layer of networkLayers()) {
@@ -83,18 +88,22 @@ export class RiverLayer implements VisualLayer {
   }
 
   update(simTime: number): void {
-    if (!this.map || !this.timeline || !this.visible) return
+    if (!this.map || !this.ctx || !this.visible) return
+    const timeline = this.ctx.timeline
     const t = Math.round(simTime / QUANTUM) * QUANTUM
-    if (t === this.painted) return
+    // The same instant means a different picture once the source has changed,
+    // so the quantum cache only counts while the source is the same one.
+    if (t === this.painted && timeline === this.source) return
     this.painted = t
-    for (const river of this.gauged) this.paint(river, simTime)
+    this.source = timeline
+    for (const river of this.gauged) this.paint(river, timeline, simTime)
   }
 
-  private paint(river: Gauged, simTime: number): void {
+  private paint(river: Gauged, timeline: TimeSource, simTime: number): void {
     const pos: number[] = []
     const values: number[] = []
     for (let i = 0; i < river.slots.length; i++) {
-      const sample = this.timeline!.sample(river.slots[i]!, simTime)
+      const sample = timeline.sample(river.slots[i]!, simTime)
       if (!sample || Number.isNaN(sample.state)) continue
       pos.push(river.pos[i]!)
       values.push(sample.state)
