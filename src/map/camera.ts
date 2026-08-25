@@ -12,7 +12,7 @@ export type Bounds = [[number, number], [number, number]]
  */
 const STACKED = '(max-width: 860px), (max-height: 620px)'
 
-export function chromePadding(): { top: number; bottom: number; left: number; right: number } {
+function chromePadding(): { top: number; bottom: number; left: number; right: number } {
   if (typeof matchMedia === 'function' && matchMedia(STACKED).matches) {
     return { top: 0, bottom: 0, left: 0, right: 0 }
   }

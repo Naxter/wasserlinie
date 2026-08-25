@@ -9,7 +9,7 @@ import { LAYER_DETAIL, LAYER_GAUGE_HIT, LAYER_QUIET } from './style'
 
 const HOVER_INTERVAL_MS = 60
 
-export type Picked = { kind: 'gauge'; uuid: string } | { kind: 'river'; id: number } | null
+type Picked = { kind: 'gauge'; uuid: string } | { kind: 'river'; id: number } | null
 
 function riverLayerIds(map: MapLibreMap): string[] {
   return map
@@ -19,7 +19,7 @@ function riverLayerIds(map: MapLibreMap): string[] {
 }
 
 /** What is under the cursor, from the ids the sources carry. */
-export function pickAt(map: MapLibreMap, point: MapMouseEvent['point']): Picked {
+function pickAt(map: MapLibreMap, point: MapMouseEvent['point']): Picked {
   const gauge = map.queryRenderedFeatures(point, { layers: [LAYER_GAUGE_HIT] })[0]
   // Feature properties come back untyped, so they are narrowed, not trusted.
   const uuid: unknown = gauge?.properties?.uuid

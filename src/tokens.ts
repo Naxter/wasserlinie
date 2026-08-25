@@ -3,15 +3,11 @@
 
 export const color = {
   abyss: '#06121C',
-  chart: '#0E2A3A',
-  shoal: '#1D5A6E',
   tide: '#4FD1D9',
   gauge: '#E8503A',
   paper: '#E6DFD1',
   haze: '#7B6FA8',
 } as const
-
-export type ColorName = keyof typeof color
 
 // How a gauge's state is coloured. State is a position on the gauge's own
 // scale: -1 its record low, -0.5 p10, 0 normal, +0.5 p90, +1 its record high.
@@ -71,45 +67,6 @@ export const font = {
   mono: "'IBM Plex Mono', ui-monospace, monospace",
 } as const
 
-export const terrain = {
-  // Germany is flat. Overview views get exaggerated, close-ups do not.
-  exaggerationFar: 1.7,
-  exaggerationNear: 1.0,
-  exaggerationFarHeight: 700_000,
-  exaggerationNearHeight: 60_000,
-  // Elevation colour ramp (metres).
-  rampMin: 0,
-  rampMax: 1400,
-  seaLevel: 0.5,
-  // Hillshade light: azimuth from north, altitude above horizon (degrees).
-  lightAzimuth: 315,
-  lightAltitude: 40,
-  outsideDim: 0.62,
-} as const
-
-export const atmosphere = {
-  fogDensity: 0.00035,
-  fogMinimumBrightness: 0.02,
-  skyBrightnessShift: -0.35,
-  skySaturationShift: -0.5,
-  groundBrightnessShift: -0.35,
-  groundSaturationShift: -0.5,
-} as const
-
-export const render = {
-  msaaSamples: 4,
-  // Past 2x the cost climbs faster than the visible gain.
-  maxPixelRatio: 2,
-} as const
-
-export const post = {
-  bloomContrast: 110,
-  bloomBrightness: -0.68,
-  bloomSigma: 2.6,
-  bloomStepSize: 1.5,
-  vignette: 0.55,
-} as const
-
 // North-up, no tilt, no rotation: the map is read by comparing places, and a
 // tilt makes the near half of the country bigger than the far half.
 //
@@ -149,6 +106,8 @@ export const map = {
   detailFromZoom: 7.5,
   /** Widths and radii reach their largest value here and stop growing. */
   maxZoomForWidth: 12,
+  /** Past 2x the cost climbs faster than the visible gain. */
+  maxPixelRatio: 2,
   gaugeRadius: [3.2, 7],
 } as const
 
@@ -165,12 +124,6 @@ export const time = {
   historyPlaySpeed: 86_400 * 50,
 } as const
 
-export const gauge = {
-  pixelSize: 9,
-  nearDistance: 40_000,
-  farDistance: 1_600_000,
-} as const
-
 export function applyCssTokens(root: HTMLElement = document.documentElement): void {
   for (const [name, value] of Object.entries(color)) root.style.setProperty(`--${name}`, value)
   root.style.setProperty('--font-display', font.display)
@@ -181,8 +134,4 @@ export function applyCssTokens(root: HTMLElement = document.documentElement): vo
 export function hexToRgb(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16)
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
-}
-
-export function mixRgb(a: [number, number, number], b: [number, number, number], t: number): [number, number, number] {
-  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]
 }

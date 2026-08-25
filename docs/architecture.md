@@ -15,19 +15,13 @@ pipeline/                       public/data/                 src/
   rivers    ──────────────────▶ rivers.json    ────────────▶ map/     viewer, style, RiverLayer, GaugeLayer
             BKG DLM1000         rivers-detail.json
   forecast  ──────────────────▶ forecast/*.parquet ───────▶ color/   the anomaly ramp
-  field     ──────────────────▶ field.bin + field.json ───▶ ui/      React panels (never touches the GPU)
-  history   ──────────────────▶ seasonal.parquet
+  history   ──────────────────▶ seasonal.parquet ────────▶ ui/      React panels (never touches the GPU)
             PEGELONLINE archive (cache/history.parquet stays local)
   backtest  ──────────────────▶ docs/forecast-skill.md
 ```
 
 Nothing in `public/data/` is committed. It is all rebuilt from public sources,
 which is why the first thing a clone needs is a pipeline run.
-
-`field.bin` is still written but **no longer read**. It baked the interpolation
-between gauges into a texture because a shader could only look things up; the
-line gradient does that interpolation directly now. Deleting the `field` step
-is a pipeline change nobody has made yet.
 
 ## There is no basemap
 
@@ -52,9 +46,10 @@ other.
 
 ## Nothing runs per frame
 
-The 3D build repainted every layer on Cesium's `preRender`, because the rivers
-carried a travelling pulse and the sun moved with the clock. Neither exists now,
-so there is nothing to animate: **colour only changes when the clock does.**
+There is no animation to drive — no pulse, no moving light, nothing that
+advances on its own — so **colour only changes when the clock does.** That is
+what makes the map comparable against itself: the same instant always paints
+the same picture, and two days differ only where the water differs.
 
 `LayerHost` (`src/map/plugin.ts`) listens to the store and coalesces onto one
 animation frame, so dragging the slider across a month costs one repaint per
@@ -84,8 +79,9 @@ advance `simTime` during playback.
    points. Each layer caches the last colour it wrote and skips the ones that
    did not change.
 
-The interpolation used to happen once, in Python. It happens per repaint now,
-and it is cheap enough that the texture was not worth keeping.
+Interpolating between gauges is cheap enough to redo on every repaint — 74
+rivers at 24 points each — so there is no baked intermediate to keep in step
+with the readings.
 
 ## What happens when you drag the slider one day
 

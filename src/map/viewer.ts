@@ -44,9 +44,9 @@ export function createMap({ container, rings }: MapOptions): MapHandle {
     // The credits live in the app's own notice panel, which has to name the
     // BKG licence in words anyway.
     maxPitch: 0,
-    // Same reasoning as the Cesium build: render at the device ratio, capped,
-    // and never at its square.
-    pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+    // Render at the device ratio, capped. Handing a renderer the ratio twice
+    // squares it, which is four times the pixels on a 2x screen.
+    pixelRatio: Math.min(window.devicePixelRatio || 1, tokens.maxPixelRatio),
   })
   map.touchZoomRotate.disableRotation()
   map.keyboard.disableRotation()

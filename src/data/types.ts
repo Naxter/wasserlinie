@@ -48,20 +48,6 @@ export interface RiversFile {
   rivers: River[]
 }
 
-export interface FieldMeta {
-  t0: string
-  now: string
-  stepHours: number
-  steps: number
-  samples: number
-  channels: number
-  stateOffset: number
-  stateScale: number
-  horizonHours: number
-  forecastRun: string | null
-  rivers: number[]
-}
-
 export interface ForecastRun {
   id: string
   model: string
@@ -75,13 +61,6 @@ export interface ForecastRun {
 
 export interface Manifest {
   runs: ForecastRun[]
-}
-
-export interface Field {
-  meta: FieldMeta
-  data: Uint8Array
-  /** river id → slot in `data` */
-  slot: Map<number, number>
 }
 
 /** The long view: one state byte per gauge per day, back to 2000. */

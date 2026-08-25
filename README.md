@@ -102,14 +102,13 @@ the app before the pipeline has run, it says so and tells you what to run.
 
 ## The pipeline
 
-`all` runs four steps, each usable on its own:
+`all` runs three steps, each usable on its own:
 
 | Step       | What it does                                                                                        |
 | ---------- | --------------------------------------------------------------------------------------------------- |
 | `fetch`    | Stations and 15-minute readings from PEGELONLINE → hourly `levels.parquet`, `stations.json`. Merges with earlier runs and keeps 90 days. |
 | `rivers`   | Downloads BKG DLM1000 (56 MB, cached), merges river axes, skeletonises wide rivers that only exist as polygons, snaps gauges onto them → `rivers.json`, `germany.json`. |
 | `forecast` | Trains three quantile GBMs on all inland stations at once, calibrates the band against held-out hours and writes a run into `forecast/` plus `manifest.json`. |
-| `field`    | Interpolates levels along every gauged river for each 6-hour step → `field.bin`, `field.json`.        |
 
 Two more are deliberately outside `all`, because each is a long job you run
 when you mean to:

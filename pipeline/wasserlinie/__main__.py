@@ -4,14 +4,13 @@ import argparse
 import logging
 import sys
 
-from . import archive, backtest, daily, fetch, field, forecast, rivers
+from . import archive, backtest, daily, fetch, forecast, rivers
 from .config import Paths
 
 STEPS = {
     "fetch": fetch.run,
     "rivers": rivers.run,
     "forecast": forecast.run,
-    "field": field.run,
     "backtest": backtest.run,
     "history": archive.run,
     "history-grid": daily.run,
@@ -20,7 +19,7 @@ STEPS = {
 # something you run when you want to know whether the forecast is any good.
 # `history-grid` is, because it is quick and reads what `history` already
 # downloaded — but it is skipped when there is no archive to read.
-ORDER = ["fetch", "rivers", "forecast", "field", "history-grid"]
+ORDER = ["fetch", "rivers", "forecast", "history-grid"]
 
 
 def main(argv: list[str] | None = None) -> int:

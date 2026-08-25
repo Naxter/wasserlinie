@@ -103,28 +103,6 @@ can serve its chart from an offset without a query engine.
   count as 200.
 - `s` is the gauge's normalised position along the part (0 = start, 1 = end).
 
-## field.json + field.bin
-
-The texture behind the river shader.
-
-```json
-{
-  "t0": "2026-07-16T10:00:00+00:00",
-  "now": "2026-08-16T16:00:00+00:00",
-  "stepHours": 6, "steps": 138, "samples": 48, "channels": 3,
-  "stateOffset": -1.5, "stateScale": 3.0,
-  "horizonHours": 72,
-  "forecastRun": "2026-08-16T16",
-  "rivers": [1, 0, 2, …]
-}
-```
-
-`field.bin` is a plain `uint8` array shaped
-`[rivers][steps][samples][channels]`, in the order of the `rivers` list.
-Per cell: R = state packed as `(state - stateOffset) / stateScale`,
-G = 255 measured … 0 forecast, B = forecast band width on the state scale.
-Steps are anchored so `now` falls exactly on a row.
-
 ## forecast/manifest.json and forecast/&lt;run&gt;.parquet
 
 The manifest lists the newest runs first; the app loads `runs[0]`.

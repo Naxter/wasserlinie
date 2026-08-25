@@ -80,14 +80,6 @@ class Paths:
         return self.out / "germany.json"
 
     @property
-    def field_meta(self) -> Path:
-        return self.out / "field.json"
-
-    @property
-    def field_bin(self) -> Path:
-        return self.out / "field.bin"
-
-    @property
     def forecast_dir(self) -> Path:
         return self.out / "forecast"
 
