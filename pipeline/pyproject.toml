@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff~=0.16.3"]
+dev = ["pytest>=8", "ruff>=0.16.3,<0.18.0"]
 
 [project.scripts]
 wasserlinie = "wasserlinie.__main__:main"
